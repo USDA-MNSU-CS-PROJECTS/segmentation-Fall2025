@@ -21,7 +21,23 @@ Results will inform USDA research on alfalfa improvement and provide insights in
 ## Repository Structure
 
 ```
-
+alfalfa-segmentation/
+├── .git/                        # Git version control
+├── .gitignore                   # Git ignore patterns
+├── README.md                    # Project documentation
+└── src/                         # Source code directory
+    ├── main/                    # Main application code
+    │   ├── core/                # Core functionality
+    │   │   └── main.py          # Main Code File
+    │   └── tools/               # Utility tools
+    │       └── tools.py         # Tool implementations
+    ├── data/                    # Data handling modules
+    │   └── data.py              # Data processing utilities
+    └── test/                    # Test suite
+        ├── core/                # Core functionality tests
+        │   └── test.py          # Core tests
+        └── tools/               # Utility tools for tests
+            └── tools.py         # Tools for tests
 ```
 
 ---
