@@ -61,6 +61,9 @@ Recommended Python version: **3.10+** (tested with 3.12)
 
 1. Add input images
 
+   > [!WARNING]
+   > Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work (pipeline work in progress)
+
 - Place your `.nd2` files into: `src/data/nd2_images/input_images`
 
 2. Convert ND2 → TIFF (batch)
