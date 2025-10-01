@@ -7,12 +7,14 @@ def main() -> None:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     src_dir = os.path.dirname(os.path.dirname(current_dir))  # .../src
     data_dir = os.path.join(src_dir, "data")
+    input_dir = os.path.join(data_dir, "nd2_images", "input_images")
     output_root = os.path.join(data_dir, "main_images", "output_images")
     tiff_dir = os.path.join(output_root, "tiff_images")
     jpg_dir = os.path.join(output_root, "jpg_images")
     preprocessed_dir = os.path.join(output_root, "preprocessed_images")
 
-    # Ensure output directories exist
+    # Ensure input and output directories exist
+    os.makedirs(input_dir, exist_ok=True)
     os.makedirs(output_root, exist_ok=True)
     os.makedirs(tiff_dir, exist_ok=True)
     os.makedirs(jpg_dir, exist_ok=True)

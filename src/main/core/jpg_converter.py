@@ -25,6 +25,7 @@ data_dir = os.path.join(src_dir, 'data')
 input_folder = os.path.join(data_dir, 'nd2_images', 'input_images')
 output_root = os.path.join(data_dir, 'main_images', 'output_images')
 jpg_output_folder = os.path.join(output_root, 'jpg_images')
+os.makedirs(input_folder, exist_ok=True)
 os.makedirs(jpg_output_folder, exist_ok=True)
 
 for filename in os.listdir(input_folder):

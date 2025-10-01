@@ -12,7 +12,8 @@ output_root = os.path.join(data_dir, "main_images", "output_images")
 jpg_output_dir = os.path.join(output_root, "jpg_images")
 tiff_output_dir = os.path.join(output_root, "tiff_images")
 
-# Ensure output directories exist
+# Ensure input and output directories exist
+os.makedirs(input_dir, exist_ok=True)
 os.makedirs(output_root, exist_ok=True)
 os.makedirs(jpg_output_dir, exist_ok=True)
 os.makedirs(tiff_output_dir, exist_ok=True)
