@@ -1,6 +1,12 @@
 from rembg import remove
 from PIL import Image
 import os
+import numpy as np
+import cv2
+
+# Simple knobs to adjust behavior
+EXPANSION_PIXELS = 25  # how much to grow the mask with dilation
+CROP_MARGIN = 100      # extra pixels around the grown mask when cropping
 
 def main() -> None:
     # Resolve repo-relative paths
@@ -42,6 +48,51 @@ def main() -> None:
         # Remove background
         print(f"Removing background for: {filename} ...")
         output_image = remove(input_image)
+
+        # Make the cutout a bit bigger by growing the mask and cropping to it
+        # We keep ORIGINAL image pixels inside that crop
+        result_rgba = output_image.convert("RGBA")
+        result_array = np.array(result_rgba)
+        alpha = result_array[:, :, 3].astype(np.uint8)
+
+        # 1) Binarize alpha so we have a clear foreground mask
+        base_mask = (alpha > 0).astype(np.uint8) * 255
+
+        # 2) Dilate to expand the foreground region outward
+        kernel_size = (EXPANSION_PIXELS * 2 + 1, EXPANSION_PIXELS * 2 + 1)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
+        expanded_mask = cv2.dilate(base_mask, kernel, iterations=1)
+
+        # 3) Optional slight blur to soften edges (avoids blocky/pixely outline)
+        expanded_alpha = cv2.GaussianBlur(expanded_mask, (5, 5), 0)
+
+        # Find bounding box of the expanded subject
+        ys, xs = np.where(expanded_alpha > 0)
+        if ys.size == 0 or xs.size == 0:
+            # Nothing detected; just save original removal result
+            output_image.save(output_path)
+            print(f"Background removed successfully. Output saved to: {output_path}")
+            continue
+
+        y_min, y_max = int(ys.min()), int(ys.max())
+        x_min, x_max = int(xs.min()), int(xs.max())
+
+        # Add a simple uniform margin around the box
+        margin = CROP_MARGIN
+        img_h, img_w = expanded_alpha.shape
+        y_min = max(0, y_min - margin)
+        y_max = min(img_h - 1, y_max + margin)
+        x_min = max(0, x_min - margin)
+        x_max = min(img_w - 1, x_max + margin)
+
+        # Crop ORIGINAL RGB and expanded alpha to this box
+        original_rgb = np.array(input_image.convert("RGB"))
+        crop_rgb = original_rgb[y_min:y_max + 1, x_min:x_max + 1, :]
+        crop_alpha = expanded_alpha[y_min:y_max + 1, x_min:x_max + 1]
+
+        # Stack to RGBA and save
+        crop_rgba = np.dstack([crop_rgb, crop_alpha])
+        output_image = Image.fromarray(crop_rgba, mode="RGBA")
 
         # Save result
         output_image.save(output_path)
