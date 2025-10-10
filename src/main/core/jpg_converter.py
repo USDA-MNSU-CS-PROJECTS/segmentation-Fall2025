@@ -1,3 +1,18 @@
+"""
+JPG Converter Module (OPTIONAL)
+
+This module converts ND2 (Nikon Digital) microscopy files to JPG format for the alfalfa segmentation pipeline.
+It provides a lightweight alternative to TIFF conversion, creating compressed JPG images suitable for
+visualization, web display, or quick preview purposes while maintaining good image quality.
+
+Key features:
+- ND2 to JPG format conversion
+- Automatic channel handling (RGB/RGBA/Grayscale)
+- High-quality compression (95% quality)
+- Multi-dimensional data handling
+- Batch processing of multiple ND2 files
+"""
+
 import os
 from nd2reader import ND2Reader
 from PIL import Image
@@ -23,7 +38,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(os.path.dirname(current_dir))  # .../src
 data_dir = os.path.join(src_dir, 'data')
 input_folder = os.path.join(data_dir, 'nd2_images', 'input_images')
-output_root = os.path.join(data_dir, 'main_images', 'output_images')
+output_root = os.path.join(data_dir, 'output_images')
 jpg_output_folder = os.path.join(output_root, 'jpg_images')
 os.makedirs(input_folder, exist_ok=True)
 os.makedirs(jpg_output_folder, exist_ok=True)

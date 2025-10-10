@@ -1,3 +1,17 @@
+"""
+Image Preprocessing Module
+
+This module handles background removal and preprocessing of TIFF images for the alfalfa segmentation pipeline.
+It uses the rembg library to automatically remove backgrounds from plant images, then applies morphological
+operations to expand the foreground mask and crops the image to focus on the plant subject with appropriate margins.
+
+Key features:
+- Automatic background removal using AI-based segmentation
+- Mask expansion through morphological dilation
+- Intelligent cropping with configurable margins
+- Preservation of original image quality within the cropped region
+"""
+
 from rembg import remove
 from PIL import Image
 import os
@@ -14,7 +28,7 @@ def main() -> None:
     src_dir = os.path.dirname(os.path.dirname(current_dir))  # .../src
     data_dir = os.path.join(src_dir, "data")
     input_dir = os.path.join(data_dir, "nd2_images", "input_images")
-    output_root = os.path.join(data_dir, "main_images", "output_images")
+    output_root = os.path.join(data_dir, "output_images")
     tiff_dir = os.path.join(output_root, "tiff_images")
     jpg_dir = os.path.join(output_root, "jpg_images")
     preprocessed_dir = os.path.join(output_root, "preprocessed_images")
