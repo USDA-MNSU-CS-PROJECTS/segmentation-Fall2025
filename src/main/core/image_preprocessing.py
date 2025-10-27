@@ -10,6 +10,8 @@ Key features:
 - Mask expansion through morphological dilation
 - Intelligent cropping with configurable margins
 - Preservation of original image quality within the cropped region
+
+THIS FILE IS DEPRECATED. USE YOLO BACKGROUND REMOVAL INSTEAD.
 """
 
 from rembg import remove

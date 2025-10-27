@@ -1,12 +1,20 @@
 {
   "run_tiff_conversion": true,
-  "run_preprocessing": true,
-  "run_ml_prep": true,
+  "run_jpg_conversion": true,
+  "run_yolo_data_yaml": true,
+  "run_yolo_training": true,
+  "run_yolo_detection": true,
+  "run_yolo_background_removal": true,
+  "run_lignin_detection": true,
+  "run_pectin_detection": true,
   "max_images": null,
-  "expansions_pixels": 25,
-  "crop_margin": 100,
-  "ml_train_split": 0.8,
-  "ml_val_split": 0.1,
-  "ml_test_split": 0.1,
-  "description": "Main pipeline configuration for alfalfa segmentation"
+  "yolo_epochs": 100,
+  "yolo_batch_size": 4,
+  "yolo_image_size": 640,
+  "yolo_conf_threshold": 0.25,
+  "yolo_iou_threshold": 0.45,
+  "yolo_canvas_size": 5000,
+  "detector_conf_threshold": 0.25,
+  "detector_mask_mode": "auto",
+  "description": "Main pipeline configuration for alfalfa segmentation with YOLO workflow and detector analysis"
 }

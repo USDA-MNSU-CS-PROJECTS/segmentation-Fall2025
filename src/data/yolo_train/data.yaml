@@ -1,0 +1,5 @@
+path: C:/Repos/alfalfa-segmentation/src/data/yolo_train
+train: images
+val: images
+names:
+  0: cell

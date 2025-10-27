@@ -6,6 +6,7 @@ nd2reader>=3.3.0
 rembg>=2.0.56
 onnxruntime>=1.18.0
 opencv-python>=4.8.0
+ultralytics>=8.0.0
 
 # Machine Learning Dependencies
 torch>=2.0.0

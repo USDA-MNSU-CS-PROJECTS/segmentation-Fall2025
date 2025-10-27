@@ -205,3 +205,64 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Machine Learning / Computer Vision specific
+# Large model files
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pb
+*.tflite
+
+# YOLO specific
+runs/
+weights/
+labels.cache
+*.cache
+**/data.yaml
+
+# Image data directories (large files)
+**/input_images/
+**/output_images/
+**/jpg_images/
+**/tiff_images/
+**/preprocessed_images/
+**/nd2_images/
+
+# Training data and results
+**/yolo_train/images/
+**/yolo_train/labels/
+**/yolo_results/
+**/yolo_train/runs/
+**/detector_results/
+
+# Log files
+*.log
+alfalfa_pipeline.log
+
+# Large PowerPoint files
+*.pptx
+*.ppt
+
+# Temporary and cache files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE and editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
