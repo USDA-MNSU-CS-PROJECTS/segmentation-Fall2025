@@ -85,64 +85,169 @@ The pipeline will automatically:
 - Analyze lignin content in processed images
 - Analyze pectin content in processed images
 
-## 🔧 **What the Pipeline Does**
+## 📊 **Complete Workflow Diagram**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              ALFALFA PIPELINE                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Stage 1: ND2 → TIFF
+  📂 src/data/nd2_images/input_images/*.nd2
+  │
+  └─→ 📤 src/data/output_images/tiff_images/*.tiff
+
+Stage 2: TIFF → JPG
+  📂 src/data/output_images/tiff_images/*.tiff
+  │
+  └─→ 📤 src/data/output_images/jpg_images/*.jpg
+
+      ↓ (Manual Setup)
+
+Stage 3: User sets up yolo_train/ (with images/ and labels/)
+
+  ┌──→ 📂 Training Data
+  │      src/data/yolo_train/images/
+  │      src/data/yolo_train/labels/
+  │
+Stage 4: Generate data.yaml
+  └─→ 📤 src/data/yolo_train/data.yaml
+
+Stage 5: Train Model
+  📂 data.yaml + yolo11n-seg.pt
+  │
+  └─→ 📤 src/data/yolo_results/runs/segment/<run>/weights/best.pt
+
+      ↓ (Uses trained weights from Stage 5)
+
+Stage 6: YOLO Detection
+  📂 src/data/output_images/jpg_images/*.jpg + best.pt
+  │
+  └─→ 📤 src/data/yolo_results/final_yolo_jpg_images/*_seg.jpg
+
+Stage 7: Background Removal
+  📂 src/data/output_images/jpg_images/*.jpg + best.pt
+  │
+  └─→ 📤 src/data/yolo_results/final_yolo_jpg_images/*_nobg.jpg
+
+      ↓ (Reads from Stage 6 & 7 output)
+
+Stage 8: Lignin Detection
+  📂 src/data/yolo_results/final_yolo_jpg_images/*.jpg + best.pt
+  │
+  └─→ 📤 src/data/detector_results/lignin_detector_results/
+      ├── combined_lignin_results.csv
+      └── visualizations/*_detected.jpg
+
+Stage 9: Pectin Detection
+  📂 src/data/yolo_results/final_yolo_jpg_images/*.jpg + best.pt
+  │
+  └─→ 📤 src/data/detector_results/pectin_detector_results/
+      ├── combined_pectin_results.csv
+      └── visualizations/*_detected.jpg
+```
+
+## 🔧 **What Each Stage Does**
 
 ### **Stage 1: ND2 → TIFF Conversion**
 
-- Converts your microscopy ND2 files to standard TIFF format
-- Handles 8-bit conversion and channel ordering
-- Outputs to: `src/data/output_images/tiff_images/`
+📂 **Input**: `src/data/nd2_images/input_images/*.nd2`
+
+- Reads your microscopy ND2 files
+
+📤 **Output**: `src/data/output_images/tiff_images/`
+
+- Converts to standard TIFF format with 8-bit conversion
 
 ### **Stage 2: TIFF → JPG Conversion**
 
-- Converts TIFF files to compressed JPG format
-- Creates visualization-ready images
-- Outputs to: `src/data/output_images/jpg_images/`
+📂 **Input**: `src/data/output_images/tiff_images/*.tiff`
 
-### **Stage 3: Manual YOLO Setup**
+- Reads the TIFF files from Stage 1
 
-- **PAUSE**: Pipeline pauses for user to set up training data
-- User creates `src/data/yolo_train/` structure with images and labels
-- User defines classes in `classes.txt`
+📤 **Output**: `src/data/output_images/jpg_images/`
+
+- Converts to compressed JPG format for visualization
+
+### **Stage 3: Manual YOLO Setup** ⏸️
+
+**PAUSE**: Pipeline waits for you to set up training data
+
+- Create: `src/data/yolo_train/images/` (put training images here)
+- Create: `src/data/yolo_train/labels/` (put YOLO labels here)
+- Create: `src/data/yolo_train/classes.txt` (define classes)
+- Press Enter when ready to continue
 
 ### **Stage 4: YOLO Data.yaml Generation**
 
-- Automatically generates YOLO dataset configuration
-- Creates `data.yaml` file pointing to training data
-- Handles train/validation splits if available
+📂 **Input**: `src/data/yolo_train/` (images, labels, classes.txt)
+
+- Reads your training data structure
+
+📤 **Output**: `src/data/yolo_train/data.yaml`
+
+- Creates YOLO dataset configuration file
 
 ### **Stage 5: YOLO Training**
 
-- Trains custom YOLO segmentation model
-- Uses configurable epochs, batch size, and image size
-- Saves best model weights to: `src/data/yolo_results/runs/segment/`
+📂 **Input**:
+
+- `src/data/yolo_train/data.yaml` (dataset config from Stage 4)
+- `yolo11n-seg.pt` (base model from repo root)
+
+📤 **Output**: `src/data/yolo_results/runs/segment/<run-name>/`
+
+- `weights/best.pt` - Best model weights (used by all subsequent stages)
+- `weights/last.pt` - Latest checkpoint
+- Training metrics and visualizations
 
 ### **Stage 6: YOLO Detection**
 
-- Runs inference on images using trained model
-- Creates segmentation visualizations
-- Outputs to: `src/data/yolo_results/final_yolo_jpg_images/`
+📂 **Input**: `src/data/output_images/jpg_images/*.jpg`
+
+- Reads JPG images from Stage 2
+- Loads trained weights from Stage 5
+
+📤 **Output**: `src/data/yolo_results/final_yolo_jpg_images/`
+
+- Creates segmentation visualizations (`*_seg.jpg`)
+- Generates `results.csv` with detection statistics
 
 ### **Stage 7: YOLO Background Removal**
 
-- Removes background using trained segmentation model
-- Keeps only detected objects
-- Creates clean images on white canvas
-- Outputs to: `src/data/yolo_results/final_yolo_jpg_images/`
+📂 **Input**: `src/data/output_images/jpg_images/*.jpg`
+
+- Reads same JPG images as Stage 6
+- Loads trained weights from Stage 5
+
+📤 **Output**: `src/data/yolo_results/final_yolo_jpg_images/`
+
+- Creates background-removed images (`*_nobg.jpg`)
+- Images placed on white canvas (5000x5000 default)
 
 ### **Stage 8: Lignin Detection**
 
-- Analyzes lignin content in processed images using HSV color analysis
-- Detects red regions in PG-stained images
-- Calculates lignin ratios within cell regions
-- Outputs to: `src/data/detector_results/lignin_detector_results/`
+📂 **Input**: `src/data/yolo_results/final_yolo_jpg_images/*.jpg`
+
+- Reads output from Stages 6 & 7
+- Uses trained YOLO model for cell detection
+
+📤 **Output**: `src/data/detector_results/lignin_detector_results/`
+
+- `combined_lignin_results.csv` - Analysis results
+- `visualizations/` - Images with lignin regions highlighted
 
 ### **Stage 9: Pectin Detection**
 
-- Analyzes pectin content in processed images using Ruthenium Red staining
-- Detects pectin regions with multiple HSV color ranges
-- Calculates pectin ratios within cell regions
-- Outputs to: `src/data/detector_results/pectin_detector_results/`
+📂 **Input**: `src/data/yolo_results/final_yolo_jpg_images/*.jpg`
+
+- Reads output from Stages 6 & 7
+- Uses trained YOLO model for cell detection
+
+📤 **Output**: `src/data/detector_results/pectin_detector_results/`
+
+- `combined_pectin_results.csv` - Analysis results
+- `visualizations/` - Images with pectin regions highlighted
 
 ## ⚙️ **Configuration Options**
 

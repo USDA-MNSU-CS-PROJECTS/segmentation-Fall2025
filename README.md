@@ -177,8 +177,10 @@ Recommended Python version: **3.10+** (tested with 3.12)
    ./setup.sh
    ```
 
-**⚠️ WARNING:** Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work (pipeline
+**⚠️ WARNING 1:** Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work (pipeline
 work in progress)
+
+**⚠️ WARNING 2:** Also please do not push up the pipeline_config.json file if you make changes there, also do not push up the data.yaml file that may be changed when running the pipeline with the yolo_data_yaml_generator.py
 
 2. **Add Images**: Place your `.nd2` files into: `src/data/nd2_images/input_images`
 
