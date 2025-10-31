@@ -39,20 +39,32 @@ from ultralytics import YOLO
 
 # HSV color range settings for lignin (red) detection
 HSV_RANGES = {
-    'lower1': [0, 80, 50],    # [Hue, Saturation, Value]
-    'upper1': [10, 255, 255], # First red range
-    'lower2': [170, 80, 50],  # [Hue, Saturation, Value]
-    'upper2': [180, 255, 255] # Second red range
+    # Deep red / burgundy (high pectin concentration)
+    'deep_red_lower': [0, 150, 100],
+    'deep_red_upper': [15, 255, 255],
+    'deep_red_lower2': [165, 150, 100],
+    'deep_red_upper2': [180, 255, 255],
+
+    # Reddish brown / orange-brown (cell wall structures, lower staining intensity)
+    'brown_lower': [5, 120, 80],
+    'brown_upper': [25, 255, 220],
+    'brown_lower2': [160, 120, 80],
+    'brown_upper2': [180, 255, 220]
 }
 
 
+
 def list_jpg_files(folder: Path) -> List[Path]:
-    """Return list of jpg/jpeg files in folder (non-recursive)."""
+    """Return list of jpg/jpeg files in folder (non-recursive) containing '_PG'."""
     if not folder.exists():
         raise FileNotFoundError(f"Input folder not found: {folder}")
-    files = [p for p in folder.iterdir() if p.suffix.lower() in {'.jpg', '.jpeg'}]
+    files = [
+        p for p in folder.iterdir()
+        if p.suffix.lower() in {'.jpg', '.jpeg'} and '_PG' in p.name and '_nobg' in p.name
+    ]
     files.sort()
     return files
+
 
 
 def find_best_weights(repo_root: Path) -> Path:
@@ -180,15 +192,29 @@ def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, num_cells:
     # convert to HSV
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    # Use configured HSV ranges
-    lower1 = np.array(HSV_RANGES['lower1'])
-    upper1 = np.array(HSV_RANGES['upper1'])
-    lower2 = np.array(HSV_RANGES['lower2'])
-    upper2 = np.array(HSV_RANGES['upper2'])
-
-    mask1 = cv2.inRange(hsv, lower1, upper1)
-    mask2 = cv2.inRange(hsv, lower2, upper2)
-    lignin_mask = cv2.bitwise_or(mask1, mask2)
+    deep_red_lower1 = np.array(HSV_RANGES['deep_red_lower'])
+    deep_red_upper1 = np.array(HSV_RANGES['deep_red_upper'])
+    deep_red_lower2 = np.array(HSV_RANGES['deep_red_lower2'])
+    deep_red_upper2 = np.array(HSV_RANGES['deep_red_upper2'])
+    
+    # Reddish brown/orange-brown detection (cell wall structures)
+    brown_lower1 = np.array(HSV_RANGES['brown_lower'])
+    brown_upper1 = np.array(HSV_RANGES['brown_upper'])
+    brown_lower2 = np.array(HSV_RANGES['brown_lower2'])
+    brown_upper2 = np.array(HSV_RANGES['brown_upper2'])
+    
+    # Create masks for deep red ranges
+    deep_red_mask1 = cv2.inRange(hsv, deep_red_lower1, deep_red_upper1)
+    deep_red_mask2 = cv2.inRange(hsv, deep_red_lower2, deep_red_upper2)
+    deep_red_mask = cv2.bitwise_or(deep_red_mask1, deep_red_mask2)
+    
+    # Create masks for brown ranges
+    brown_mask1 = cv2.inRange(hsv, brown_lower1, brown_upper1)
+    brown_mask2 = cv2.inRange(hsv, brown_lower2, brown_upper2)
+    brown_mask = cv2.bitwise_or(brown_mask1, brown_mask2)
+    
+    # Combine all pectin-related regions
+    lignin_mask = cv2.bitwise_or(deep_red_mask, brown_mask)
 
     # Optional morphological cleaning to remove small noise
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
