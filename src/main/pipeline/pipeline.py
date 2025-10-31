@@ -63,12 +63,13 @@ except ImportError:
 run_lignin_detection = None
 run_pectin_detection = None
 
-# Configure logging
+# Configure logging - use absolute path for log file (important for SLURM)
+log_file = Path(__file__).resolve().parent.parent.parent.parent / 'alfalfa_pipeline.log'
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('alfalfa_pipeline.log'),
+        logging.FileHandler(str(log_file)),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -81,10 +82,20 @@ class AlfalfaPipeline:
         """Initialize pipeline with configuration"""
         self.start_time = time.time()
         
-        # Setup paths first
-        self.current_dir = Path(__file__).parent
+        # Setup paths first - use resolve() for absolute paths (important for SLURM)
+        self.current_dir = Path(__file__).resolve().parent
         self.src_dir = self.current_dir.parent.parent.parent
         self.data_dir = self.src_dir / "src" / "data"
+        
+        # Ensure we're in the right directory structure
+        if not self.src_dir.exists():
+            # Try alternative: assume we're at repo root
+            potential_repo_root = Path.cwd()
+            potential_data_dir = potential_repo_root / "src" / "data"
+            if potential_data_dir.exists():
+                self.src_dir = potential_repo_root
+                self.data_dir = potential_data_dir
+                logger.info(f"Using alternative path resolution: {self.data_dir}")
         
         # Load configuration
         if config is None:
@@ -133,6 +144,7 @@ class AlfalfaPipeline:
             "yolo_conf_threshold": 0.25,
             "yolo_iou_threshold": 0.45,
             "yolo_canvas_size": 5000,
+            "yolo_device": None,  # None = auto-detect, or specify "0", "1", "cpu", "cuda"
             "detector_conf_threshold": 0.25,
             "detector_mask_mode": "auto"
         }
@@ -193,6 +205,20 @@ class AlfalfaPipeline:
     
     def manual_pause_for_yolo_setup(self) -> bool:
         """Pause pipeline for manual YOLO training data setup"""
+        # Skip manual pause if running in SLURM (non-interactive environment)
+        if os.environ.get("SLURM_JOB_RUNNING") or os.environ.get("SLURM_JOB_ID"):
+            logger.info("Running in SLURM environment - skipping manual pause")
+            logger.info("Assuming YOLO training data is already set up")
+            # Check if YOLO training data exists
+            yolo_train_dir = self.data_dir / "yolo_train"
+            if not yolo_train_dir.exists():
+                logger.warning(f"YOLO training directory not found: {yolo_train_dir}")
+                logger.warning("Pipeline may fail if training data is required")
+            else:
+                logger.info(f"YOLO training directory found: {yolo_train_dir}")
+            return True
+        
+        # Interactive mode (local execution)
         logger.info("=" * 60)
         logger.info("MANUAL PAUSE: YOLO Training Data Setup Required")
         logger.info("=" * 60)
@@ -278,6 +304,9 @@ class AlfalfaPipeline:
                 "--batch", str(self.config["yolo_batch_size"]),
                 "--imgsz", str(self.config["yolo_image_size"])
             ]
+            # Add device argument if specified in config
+            if self.config.get("yolo_device") is not None:
+                sys.argv.extend(["--device", str(self.config["yolo_device"])])
             
             try:
                 train_yolo_model()
@@ -431,9 +460,12 @@ class AlfalfaPipeline:
         logger.info("STARTING ALFALFA SEGMENTATION PIPELINE")
         logger.info("=" * 60)
         
-        # Check inputs
-        if not self.check_inputs():
-            return False
+        # Check inputs only if TIFF or JPG conversion is enabled
+        if self.config["run_tiff_conversion"] or self.config["run_jpg_conversion"]:
+            if not self.check_inputs():
+                return False
+        else:
+            logger.info("Skipping ND2 file check (TIFF and JPG conversion are disabled)")
         
         # Run pipeline steps
         steps = [
@@ -480,6 +512,7 @@ def main():
     parser.add_argument("--yolo-epochs", type=int, help="Number of YOLO training epochs")
     parser.add_argument("--yolo-batch-size", type=int, help="YOLO training batch size")
     parser.add_argument("--yolo-image-size", type=int, help="YOLO training image size")
+    parser.add_argument("--yolo-device", type=str, help="YOLO training device (e.g., '0', '1', 'cpu', 'cuda', or null for auto-detect)")
     parser.add_argument("--detector-conf", type=float, help="Detector confidence threshold")
     parser.add_argument("--detector-mask-mode", choices=['auto', 'yolo', 'nonwhite'], help="Detector mask mode")
     
@@ -528,6 +561,9 @@ def main():
         config["yolo_batch_size"] = args.yolo_batch_size
     if args.yolo_image_size:
         config["yolo_image_size"] = args.yolo_image_size
+    if args.yolo_device is not None:
+        # Handle "null" string as None for auto-detect
+        config["yolo_device"] = None if args.yolo_device.lower() == "null" else args.yolo_device
     if args.detector_conf:
         config["detector_conf_threshold"] = args.detector_conf
     if args.detector_mask_mode:

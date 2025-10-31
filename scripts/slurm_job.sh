@@ -18,24 +18,44 @@ echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
 echo "Start time: $(date)"
 
-# Load modules (adjust based on your supercomputer)
-module load python/3.10
-module load cuda/11.8
-module load gcc/9.3.0
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Create virtual environment
-echo "Setting up Python environment..."
-python -m venv alfalfa_env
+# Change to repository root directory (critical for relative paths)
+cd "$REPO_ROOT" || exit 1
+echo "Working directory: $(pwd)"
+
+# Load modules (adjust based on your supercomputer)
+# Comment out or modify based on your system's available modules
+module load python/3.10 2>/dev/null || echo "Warning: python/3.10 module not found"
+module load cuda/11.8 2>/dev/null || echo "Warning: cuda/11.8 module not found"
+module load gcc/9.3.0 2>/dev/null || echo "Warning: gcc/9.3.0 module not found"
+
+# Create virtual environment (if it doesn't exist)
+if [ ! -d "alfalfa_env" ]; then
+    echo "Setting up Python environment..."
+    python -m venv alfalfa_env
+fi
 source alfalfa_env/bin/activate
 
 # Install dependencies
 echo "Installing dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
+else
+    echo "Warning: requirements.txt not found. Installing basic dependencies..."
+    pip install numpy opencv-python pillow ultralytics pandas
+fi
 
-# Additional ML dependencies
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install scikit-learn matplotlib seaborn
+# Additional ML dependencies (if needed)
+# Uncomment if PyTorch is not in requirements.txt
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# pip install scikit-learn matplotlib seaborn
+
+# Set environment variable to indicate we're running in SLURM
+export SLURM_JOB_RUNNING=1
 
 # Run the pipeline
 echo "Starting pipeline execution..."

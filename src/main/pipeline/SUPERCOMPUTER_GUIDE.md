@@ -14,7 +14,7 @@ The pipeline processes ND2 microscopy images through three main stages:
 
 ### 1. Supercomputer Access
 
-- Access to a SLURM or PBS-based supercomputer
+- Access to a SLURM-based supercomputer
 - Basic familiarity with command line and job submission
 - Sufficient storage quota for your images and outputs
 
@@ -22,6 +22,7 @@ The pipeline processes ND2 microscopy images through three main stages:
 
 - Upload your ND2 files to: `src/data/nd2_images/input_images/`
 - Ensure you have enough storage space (ND2 files can be large)
+- **Important**: If running YOLO training stages, ensure your `src/data/yolo_train/` directory is set up before submitting the job (the pipeline will skip the manual pause in SLURM)
 
 ## Quick Start
 
@@ -32,27 +33,45 @@ The pipeline processes ND2 microscopy images through three main stages:
 scp -r alfalfa-segmentation/ username@supercomputer.edu:/path/to/your/workspace/
 ```
 
-### Step 2: Submit a Job
+### Step 2: Prepare YOLO Training Data (if needed)
+
+**Important**: If your pipeline includes YOLO training steps, set up the training data before submitting:
 
 ```bash
-# For SLURM systems
-sbatch scripts/slurm_job.sh
-
-# For PBS systems
-qsub scripts/pbs_job.sh
+# Ensure this structure exists in your repo on the supercomputer:
+# src/data/yolo_train/
+#   ├── images/        # Training images
+#   ├── labels/         # YOLO label files
+#   └── classes.txt     # Class definitions
 ```
 
-### Step 3: Monitor Your Job
+The pipeline automatically detects SLURM execution and skips the manual pause step.
+
+### Step 3: Submit a Job
+
+```bash
+# Navigate to your repository root directory
+cd /path/to/alfalfa-segmentation
+
+# Submit the SLURM job
+sbatch scripts/slurm_job.sh
+```
+
+### Step 4: Monitor Your Job
 
 ```bash
 # Check job status (SLURM)
 squeue -u $USER
 
-# Check job status (PBS)
-qstat -u $USER
+# View detailed job information
+scontrol show job <JOB_ID>
 
-# View output logs
+# View output logs (logs are written to the repo root directory)
 tail -f alfalfa_pipeline_<JOB_ID>.out
+tail -f alfalfa_pipeline_<JOB_ID>.err
+
+# View pipeline log file
+tail -f alfalfa_pipeline.log
 ```
 
 ## Detailed Usage
@@ -63,13 +82,23 @@ tail -f alfalfa_pipeline_<JOB_ID>.out
 
 - **Resources**: 1 node, 8 CPUs, 32GB RAM, 1 GPU
 - **Runtime**: 4 hours maximum
-- **Partition**: GPU partition (adjust as needed)
+- **Partition**: GPU partition (adjust based on your system)
 
-#### PBS Job Script (`scripts/pbs_job.sh`)
+**Key Features:**
 
-- **Resources**: 1 node, 8 processors, 32GB RAM
-- **Runtime**: 4 hours maximum
-- **Queue**: GPU queue (adjust as needed)
+- Automatically changes to repository root directory (ensures relative paths work correctly)
+- Creates Python virtual environment if it doesn't exist
+- Detects SLURM environment and sets appropriate environment variables
+- Handles missing modules gracefully
+- Pipelines automatically skip interactive steps when running in SLURM
+
+**Customization:**
+Edit `scripts/slurm_job.sh` to:
+
+- Adjust module names for your system (`module load python/3.10`, etc.)
+- Modify partition name (`--partition=gpu`)
+- Change resource requirements (CPUs, memory, GPU count)
+- Adjust time limit (`--time=04:00:00`)
 
 ### Configuration Files
 
@@ -156,33 +185,62 @@ src/data/
 
 #### 1. Module Loading Errors
 
+The SLURM script handles missing modules gracefully, but you may need to adjust module names for your system:
+
 ```bash
-# Check available modules
+# Check available modules on your system
 module avail python
 module avail cuda
+module avail gcc
 
-# Load correct versions
-module load python/3.10
-module load cuda/11.8
+# Edit scripts/slurm_job.sh to use your system's module names
+# For example, you might need:
+module load python/3.9
+module load cuda/12.0
+# Or your system might not require explicit module loading
 ```
 
 #### 2. Memory Issues
 
 - Reduce `batch_size` in ML config
 - Process fewer images at once by setting `max_images`
-- Request more memory in job script
+- Request more memory in job script (edit `--mem=32G` in `slurm_job.sh`)
 
-#### 3. GPU Issues
+#### 3. Path Resolution Issues
+
+If you see file not found errors:
+
+```bash
+# Ensure you're submitting from the repository root
+cd /path/to/alfalfa-segmentation
+sbatch scripts/slurm_job.sh
+
+# The script automatically changes to repo root, but verify in your output logs:
+# Working directory: /path/to/alfalfa-segmentation
+```
+
+#### 4. SLURM Job Hangs at Manual Pause
+
+**Fixed**: The pipeline now automatically detects SLURM execution and skips interactive steps. If you still experience issues, ensure:
+
+```bash
+# Environment variable is set correctly
+echo $SLURM_JOB_ID  # Should show job ID when running in SLURM
+```
+
+#### 5. GPU Issues
 
 - Check GPU availability: `nvidia-smi`
 - Ensure CUDA modules are loaded
 - Verify PyTorch CUDA installation
+- If GPU is not available, modify `slurm_job.sh` to remove `--gres=gpu:1` and use CPU-only partition
 
-#### 4. File Path Issues
+#### 6. File Path Issues
 
-- Ensure all paths are correct
+- Ensure all paths are correct relative to repository root
 - Check file permissions
 - Verify input files exist
+- The SLURM script automatically changes to repo root to ensure paths work correctly
 
 ### Performance Optimization
 

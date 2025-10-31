@@ -167,7 +167,7 @@ def estimate_cell_mask_nonwhite(image: np.ndarray) -> Tuple[np.ndarray, int]:
     return cell_mask, 1
 
 
-def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, num_cells: int = 0, debug: bool = False) -> Tuple[int, int, int, np.ndarray, np.ndarray]:
+def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: bool = False) -> Tuple[int, int, int, np.ndarray, np.ndarray]:
     """Detect red pixels in BGR image within cell region and return statistics.
 
     Uses HSV color space with two ranges for red.
@@ -255,13 +255,11 @@ def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, num_cells:
     if cell_pixels > 0:
         ratio = red_count / cell_pixels
         text1 = f"Lignin in cell: {ratio:.2%}"
-        text2 = f"Cells detected: {num_cells}"
         text3 = f"Cell pixels: {cell_pixels:,}"
         text4 = f"Lignin pixels: {red_count:,}"
     else:
         ratio = 0.0
         text1 = "No cell detected"
-        text2 = ""
         text3 = ""
         text4 = ""
     
@@ -288,8 +286,6 @@ def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, num_cells:
     step = int(90 * base_scale)
 
     draw_text_with_outline(vis_img, text1, (x, y), font_scale_main, (0, 0, 0), thickness)
-    y += step
-    draw_text_with_outline(vis_img, text2, (x, y), font_scale_sub, (0, 0, 0), thickness)
     y += step
     draw_text_with_outline(vis_img, text3, (x, y), font_scale_sub, (0, 0, 0), thickness)
     y += step
@@ -440,19 +436,19 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
                     chosen_mode = 'nonwhite' if white_ratio > 0.6 else 'yolo'
 
             if chosen_mode == 'nonwhite':
-                cell_mask, num_cells = estimate_cell_mask_nonwhite(img)
+                cell_mask, _ = estimate_cell_mask_nonwhite(img)
             else:
-                cell_mask, num_cells = detect_cell_mask(yolo_model, img, conf=conf)
+                cell_mask, _ = detect_cell_mask(yolo_model, img, conf=conf)
             
             # Track images with no cell detected
-            if num_cells == 0 or np.count_nonzero(cell_mask) == 0:
+            if np.count_nonzero(cell_mask) == 0:
                 no_cell_count += 1
                 if debug:
                     print(f"  Warning: No cell detected in {p.name}")
             
             # Step 2: Detect lignin within cell region
             red_count, cell_pixels, total_pixels, lignin_mask, vis_img = detect_red_ratio(
-                img, cell_mask, num_cells, debug=debug
+                img, cell_mask, debug=debug
             )
             
             # Calculate ratio based on cell area (not entire image)
@@ -462,7 +458,7 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
             imageset = input_folder.name  # e.g., '20240630-20240644_10xstitch_PG'
             metadata = extract_metadata_from_filename(p.name, imageset)
             
-            results.append((p.name, red_count, cell_pixels, total_pixels, num_cells, ratio, metadata))
+            results.append((p.name, red_count, cell_pixels, total_pixels, ratio, metadata))
 
             # Save visualization
             vis_path = vis_dir / f"{p.stem}_detected.jpg"
@@ -480,7 +476,7 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
     
     # Calculate statistics
     if results:
-        ratios = [r[5] for r in results if r[4] > 0]  # Only include images with detected cells
+        ratios = [r[4] for r in results if r[2] > 0]  # Only include images with detected cells
         if ratios:
             avg_ratio = sum(ratios) / len(ratios)
             min_ratio = min(ratios)
@@ -509,12 +505,12 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
             'Project', 'ImageSet', 'Location', 'Maturity', 'AlfalfaLine', 'ImageID', 'Year', 
             'LabID', 'CrossSection', 'IncubationTime_Hr', 'ImageType', 'Stain',
             'filename', 'lignin_pixel_count', 'cell_pixel_count', 'total_pixel_count', 
-            'cells_detected', 'lignin_ratio_in_cell', 'Percentage of Lignin'
+            'lignin_ratio_in_cell', 'Percentage of Lignin'
         ])
         
         # Data rows
         for row in all_results:
-            filename, red_count, cell_pixels, total_pixels, num_cells, ratio, metadata = row
+            filename, red_count, cell_pixels, total_pixels, ratio, metadata = row
             writer.writerow([
                 metadata['Project'],
                 metadata['ImageSet'],
@@ -532,7 +528,6 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
                 red_count,
                 cell_pixels,
                 total_pixels,
-                num_cells,
                 f"{ratio:.6f}",
                 f"{ratio:.2%}"
             ])

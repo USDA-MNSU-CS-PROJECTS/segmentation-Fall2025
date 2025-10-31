@@ -28,7 +28,7 @@ def resolve_defaults() -> tuple[Path, Path, Path, int]:
     data = repo / "src" / "data" / "yolo_train" / "data.yaml"
     project = repo / "src" / "data" / "yolo_results" / "runs" / "segment"
     # Default epochs for training (edit this value to change default)
-    default_epochs = 100
+    default_epochs = 150
     return weights, data, project, default_epochs
 
 
@@ -62,14 +62,27 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--erasing", type=float, default=0.4)
     ap.add_argument("--auto_augment", type=str, default="randaugment")
     ap.add_argument("--close_mosaic", type=int, default=10)
+    ap.add_argument("--device", type=str, default=None, help="Device to use for training (e.g., '0', '1', 'cpu', 'cuda'). If not specified, auto-detects.")
     return ap.parse_args()
 
 
 def auto_device() -> str:
+    """Automatically detect and return the best device for training"""
     try:
         import torch  # type: ignore
-        return "0" if torch.cuda.is_available() else "cpu"
-    except Exception:
+        if torch.cuda.is_available():
+            device_id = torch.cuda.current_device()
+            device_name = torch.cuda.get_device_name(device_id)
+            print(f"GPU detected: {device_name} (CUDA device {device_id})")
+            return str(device_id)
+        else:
+            print("No GPU detected, using CPU")
+            return "cpu"
+    except ImportError:
+        print("PyTorch not found, using CPU")
+        return "cpu"
+    except Exception as e:
+        print(f"Error detecting device: {e}, using CPU")
         return "cpu"
 
 
@@ -87,6 +100,26 @@ def main() -> None:
 
     model = YOLO(str(args.weights))
     run_name = args.name or f"alfalfa-minimal-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    # Determine device to use
+    device = args.device if args.device is not None else auto_device()
+    
+    # Validate device if CUDA is requested
+    if device in ["cuda", "0", "1"] or (isinstance(device, str) and device.isdigit()):
+        try:
+            import torch  # type: ignore
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    "CUDA/GPU requested but not available. "
+                    "Install PyTorch with CUDA support: "
+                    "pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121"
+                )
+            if isinstance(device, str) and device.isdigit() and int(device) >= torch.cuda.device_count():
+                raise RuntimeError(f"GPU device {device} requested but only {torch.cuda.device_count()} GPU(s) available")
+        except ImportError:
+            raise ImportError("PyTorch not installed. Install with: pip install torch torchvision torchaudio")
+    
+    print(f"Using device: {device}")
 
     # Simple progress callback: print only epoch and %
     def _on_fit_epoch_end(trainer):
@@ -109,7 +142,7 @@ def main() -> None:
         epochs=args.epochs,
         imgsz=args.imgsz,
         batch=args.batch,
-        device=auto_device(),
+        device=device,
         project=str(args.project),
         name=run_name,
         save_period=args.save_period,
