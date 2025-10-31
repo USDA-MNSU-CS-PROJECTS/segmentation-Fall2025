@@ -40,25 +40,29 @@ from ultralytics import YOLO
 # HSV color range settings for Ruthenium Red stained pectin
 # Targeting deep red/burgundy (high pectin) and reddish brown/orange-brown (cell wall structures)
 HSV_RANGES = {
-    # Deep red / burgundy (high pectin concentration)
-    'deep_red_lower': [0, 100, 80],      # Lower saturation and value for deep reds
+    # Deep red / burgundy
+    'deep_red_lower': [0, 130, 35],
     'deep_red_upper': [15, 255, 255],
-    'deep_red_lower2': [165, 100, 80],   # Wrap around for reds near 180
+    'deep_red_lower2': [165, 130, 35],
     'deep_red_upper2': [180, 255, 255],
-    
-    # Reddish brown / orange-brown (cell wall structures, lower staining intensity)
-    'brown_lower': [5, 50, 40],          # Lower saturation for brownish tones
-    'brown_upper': [25, 255, 200],       # Orange-brown range
-    'brown_lower2': [160, 50, 40],       # Reddish brown range
-    'brown_upper2': [180, 255, 200]
+
+    # Reddish brown / orange-brown
+    'brown_lower': [3, 70, 55],
+    'brown_upper': [25, 255, 210],
+    'brown_lower2': [160, 70, 55],
+    'brown_upper2': [180, 255, 210]
 }
 
 
+
 def list_jpg_files(folder: Path) -> List[Path]:
-    """Return list of jpg/jpeg files in folder (non-recursive)."""
+    """Return list of jpg/jpeg files in folder (non-recursive) containing '_PG'."""
     if not folder.exists():
         raise FileNotFoundError(f"Input folder not found: {folder}")
-    files = [p for p in folder.iterdir() if p.suffix.lower() in {'.jpg', '.jpeg'}]
+    files = [
+        p for p in folder.iterdir()
+        if p.suffix.lower() in {'.jpg', '.jpeg'} and '_' in p.name and '_nobg' in p.name
+    ]
     files.sort()
     return files
 
