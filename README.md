@@ -5,16 +5,23 @@
 This project develops a comprehensive image analysis pipeline for alfalfa stem cross-section segmentation using YOLO-based deep learning.  
 The pipeline processes microscopy images (`.nd2` format) through a complete workflow from raw data to segmented results:
 
+## YouTube video link explaining entire process / repo:
+
+#put link here
+
+---
+
 **Pipeline Workflow**:
 
-1. **ND2 → TIFF Conversion** - Convert Nikon microscopy files to standard TIFF format
-2. **TIFF → JPG Conversion** - Create compressed images for visualization
-3. **Manual YOLO Setup** - User prepares training data (images + labels)
-4. **YOLO Training** - Train custom segmentation model
-5. **YOLO Detection** - Run inference on images
-6. **YOLO Background Removal** - AI-powered object isolation
-7. **Lignin Detection** - Analyze lignin content in processed images
-8. **Pectin Detection** - Analyze pectin content in processed images
+1. **ND2 Measurements Extraction** - Extract pixel-to-micron measurements from ND2 files
+2. **ND2 → TIFF Conversion** - Convert Nikon microscopy files to standard TIFF format
+3. **TIFF → JPG Conversion** - Create compressed images for visualization
+4. **Manual YOLO Setup** - User prepares training data (images + labels)
+5. **YOLO Training** - Train custom segmentation model
+6. **YOLO Detection** - Run inference on images
+7. **YOLO Background Removal** - AI-powered object isolation
+8. **Lignin Detection** - Analyze lignin content in processed images
+9. **Pectin Detection** - Analyze pectin content in processed images
 
 **Current Status**: Complete YOLO-based segmentation pipeline with detector analysis ✅  
 **Key Features**: Automated training, detection, background removal, and chemical composition analysis
@@ -27,6 +34,7 @@ Results will inform USDA research on alfalfa improvement and provide insights in
 
 ### **Current Pipeline Features**
 
+- ✅ **ND2 Measurements Extraction** (pixel-to-micron calibration from metadata)
 - ✅ **ND2 → TIFF Conversion** (batch processing)
 - ✅ **TIFF → JPG Conversion** (compressed visualization)
 - ✅ **Manual YOLO Data Setup** (user-guided training data preparation)
@@ -60,15 +68,14 @@ Results will inform USDA research on alfalfa improvement and provide insights in
 ```
 alfalfa-segmentation/
 ├── README.md
-├── SUPERCOMPUTER_GUIDE.md
 ├── requirements.txt             # Python dependencies
 ├── setup.sh                    # Setup script
-├── test_pipeline.py            # Test script
 ├── config/
 │   └── pipeline_config.json    # Pipeline configuration
 ├── scripts/
 │   ├── slurm_job.sh           # SLURM job script
-│   └── pbs_job.sh            # PBS job script
+│   ├── pbs_job.sh            # PBS job script
+|   └── count_jpg_images.py   # Simple script to count amount of JPGs
 └── src/
     ├── data/
     │   ├── nd2_images/
@@ -81,18 +88,23 @@ alfalfa-segmentation/
     │   │   ├── images/                # Training images
     │   │   ├── labels/                # YOLO format labels
     │   │   ├── classes.txt            # Class names
-    │   │   └── data.yaml              # Dataset configuration
+    │   │   ├── data.yaml              # Dataset configuration
+    |   |   └── notes.json             # Will be generated from label studio
     │   ├── yolo_results/               # YOLO outputs
-    │   │   ├── runs/segment/          # Training runs and weights
+    │   │   ├── runs/segment/          # Training runs and weights after segmentation
     │   │   └── final_yolo_jpg_images/  # Detection and background removal outputs
     │   └── detector_results/           # Detector analysis results
+    │       ├── nd2_micron_measurements.csv  # Pixel-to-micron measurements from ND2 files
     │       ├── lignin_detector_results/    # Lignin detection results and visualizations
     │       └── pectin_detector_results/    # Pectin detection results and visualizations
     └── main/
         ├── core/
         │   ├── tiff_converter.py       # ND2 → 8-bit TIFF (batch)
         │   ├── jpg_converter.py       # 8-bit TIFF → jpg
-        │   ├── image_preprocessing.py   # Background removal on TIFF (batch)
+        │   ├── image_preprocessing.py   # Background removal on TIFF (batch, deprecated)
+        │   ├── pixel_to_micron_measurement/  # Pixel-to-micron measurement utilities
+        │   │   ├── process_nd2_measurements.py  # Extract measurements from ND2 files
+        │   │   └── README.md           # Measurement utilities documentation
         │   ├── detectors/              # Image analysis detectors
         │   │   ├── Lignin(PG)_detector.py  # Lignin detection via HSV color analysis
         │   │   ├── Pectin(RR)_detector.py  # Pectin detection via Ruthenium Red staining
@@ -102,9 +114,10 @@ alfalfa-segmentation/
         │       ├── yolo_data_yaml_generator.py # Generate YOLO training datasets
         │       ├── yolo_detection.py       # YOLO segmentation inference
         │       ├── yolo_train.py          # YOLO segmentation model training
-        │       └── YOLO_WORKFLOW_ANALYSIS.md # YOLO Workflow README
+        │       └── README.md               # YOLO workflow documentation
         └── pipeline/
             ├── pipeline.py             # Main pipeline orchestrator
+            ├── README.md               # Pipeline documentation
             └── SUPERCOMPUTER_GUIDE.md  # Supercomputer usage guide
 ```
 
@@ -120,6 +133,8 @@ These folders will be created automatically when you run the corresponding scrip
 
 - `src/data/output_images/` - Created by conversion scripts
 - `src/data/yolo_results/` - Created by YOLO training/detection scripts
+- `src/data/detector_results/` - Created by measurement and detector scripts
+- `src/data/detector_results/nd2_micron_measurements.csv` - Created by ND2 measurements script
 - `src/data/detector_results/lignin_detector_results/` - Created by lignin detection scripts
 - `src/data/detector_results/pectin_detector_results/` - Created by pectin detection scripts
 
@@ -142,14 +157,27 @@ You need to manually create and populate these folders:
    └── classes.txt     # Create this file with your class names
    ```
 
+3. **For analysing ONLY JPG images** (Required for using yolo_background_removal and yolo_detection and steps past that. This can also be done automatically when using the pipeline and converting nd2 -> tif -> jpg, but if you just want to analyze specific JPG images you can put them here)
+
+   ```
+   src/data/output_images/... # Place any JPG images to be analysed here
+
+   src/data/yolo_train/... # place BOTH annotated images AND labels folders here (allows for model to train if needed)
+
+   src/data/yolo_results/... # Place runs folder here (this is our trained model we uploaded to Box or from the client or handover materials)
+   ```
+
+   This will allow you to run the yolo_background_removal.py file and the yolo_detection file, which outputs to yolo_results folder, then you can use the Lignin and Pectin detectors and skip all the nd2 -> tif -> jpg conversions. This is just if you have JPGs already and dont want to download a bunch of nd2 images, this allows you to run these specific files instead. There is more information found in other readmes throughout the repo on how specifically each file runs and where the locations of each file grabs / outputs images etc..
+
 ### **🔄 Workflow Order**
 
 1. **Manual**: Create required folders and upload your `.nd2` files to `src/data/nd2_images/input_images/`
-2. **Automatic**: Convert ND2 → TIFF using `tiff_converter.py`
-3. **Automatic**: Convert TIFF → JPG using `jpg_converter.py`
-4. **Manual**: Set up YOLO training data in `src/data/yolo_train/` (images + labels + classes.txt)
-5. **Automatic**: Run YOLO training, detection, and background removal scripts
-6. **Automatic**: Run lignin and pectin detection analysis on processed images
+2. **Automatic**: Extract ND2 measurements using `process_nd2_measurements.py` (runs automatically in pipeline)
+3. **Automatic**: Convert ND2 → TIFF using `tiff_converter.py`
+4. **Automatic**: Convert TIFF → JPG using `jpg_converter.py`
+5. **Manual**: Set up YOLO training data in `src/data/yolo_train/` (images + labels + classes.txt)
+6. **Automatic**: Run YOLO training, detection, and background removal scripts
+7. **Automatic**: Run lignin and pectin detection analysis on processed images
 
 ---
 
@@ -170,11 +198,17 @@ Recommended Python version: **3.10+** (tested with 3.12)
 
 ### Quick Start
 
-1. **Setup**: Run the setup script
+1. **Setup**: Run the setup script (sh / supercomputer)
 
    ```bash
    chmod +x setup.sh
    ./setup.sh
+   ```
+
+   (setup locally)
+
+   ```
+   pip install -r requirements.txt
    ```
 
 **⚠️ WARNING 1:** Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work (pipeline
@@ -185,6 +219,12 @@ work in progress)
 2. **Add Images**: Place your `.nd2` files into: `src/data/nd2_images/input_images`
 
 3. **Run Individual Steps**:
+
+   **Extract ND2 Measurements:**
+
+   ```bash
+   python src/main/core/pixel_to_micron_measurement/process_nd2_measurements.py
+   ```
 
    **Convert ND2 → TIFF:**
 
@@ -248,6 +288,7 @@ work in progress)
 
 ### Local Pipeline Options
 
+- `--skip-nd2-measurements`: Skip ND2 measurements extraction
 - `--skip-tiff`: Skip ND2 to TIFF conversion
 - `--skip-jpg`: Skip TIFF to JPG conversion
 - `--skip-yolo-data-yaml`: Skip YOLO data.yaml generation
@@ -305,7 +346,7 @@ python src/main/core/yolo/yolo_train.py --epochs 100
 - **Labels**: `src/data/yolo_train/labels/`
 - **Configuration**: `src/data/yolo_train/data.yaml`
 
-For detailed YOLO workflow information, see: [`src/main/core/yolo/YOLO_WORKFLOW_ANALYSIS.md`](src/main/core/yolo/YOLO_WORKFLOW_ANALYSIS.md)
+For detailed YOLO workflow information, see: [`src/main/core/yolo/README.md`](src/main/core/yolo/README.md)
 
 For detailed detector documentation, see: [`src/main/core/detectors/README.md`](src/main/core/detectors/README.md)
 
@@ -348,25 +389,12 @@ For detailed detector documentation, see: [`src/main/core/detectors/README.md`](
 - `a,b,c,d` = 4 cross regions of the same plant
 - `T0` = Time point (T0=before digestion, future: T4,T8,T24,T48,T96)
 
-### **Current Classification** (TEMPORARY - NEEDS UPDATING)
-
-- `thin_non_lignified`
-- `thick_non_lignified`
-- `thin_lignified`
-- `thick_lignified`
-
 ### **Image-Based Classification**
 
 - ✅ **Lignin Detection** - HSV color analysis identifies high/low lignin regions in PG-stained images
 - ✅ **Pectin Detection** - Ruthenium Red staining analysis for pectin content in RR-stained images
 - ✅ **YOLO Segmentation** - AI-powered cell wall boundary detection and background removal
 - ✅ **Automated Analysis** - Batch processing with metadata extraction and visualization
-- 🔄 **Thickness Measurement** - Automated wall thickness quantification
-- 🔄 **Integrated Classification** - Combine all metrics for final classification
-
-## Deliverables
-
----
 
 ## Team
 

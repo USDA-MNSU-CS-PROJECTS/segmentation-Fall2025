@@ -7,15 +7,16 @@ It coordinates the execution of all pipeline stages in the correct sequence, fro
 through YOLO-based segmentation and background removal.
 
 Pipeline stages:
-1. ND2 to TIFF conversion - Converts Nikon Digital microscopy files to standard TIFF format
-2. TIFF to JPG conversion - Converts TIFF files to JPG format for visualization
-3. PAUSE - Manual step for user to set up yolo_train folder with images and labels
-4. YOLO data.yaml generation - Creates data.yaml file for YOLO training
-5. YOLO training - Trains YOLO segmentation model
-6. YOLO detection - Runs inference on images using trained model
-7. YOLO background removal - Removes background using trained segmentation model
-8. Lignin detection - Detects lignin regions in processed images
-9. Pectin detection - Detects pectin regions in processed images
+1. ND2 measurements extraction - Extracts pixel-to-micron measurements from ND2 files
+2. ND2 to TIFF conversion - Converts Nikon Digital microscopy files to standard TIFF format
+3. TIFF to JPG conversion - Converts TIFF files to JPG format for visualization
+4. PAUSE - Manual step for user to set up yolo_train folder with images and labels
+5. YOLO data.yaml generation - Creates data.yaml file for YOLO training
+6. YOLO training - Trains YOLO segmentation model
+7. YOLO detection - Runs inference on images using trained model
+8. YOLO background removal - Removes background using trained segmentation model
+9. Lignin detection - Detects lignin regions in processed images
+10. Pectin detection - Detects pectin regions in processed images
 
 Key features:
 - Configurable pipeline execution (can skip individual stages)
@@ -39,9 +40,11 @@ current_dir = Path(__file__).parent
 core_dir = current_dir.parent / "core"
 yolo_dir = core_dir / "yolo"
 detectors_dir = core_dir / "detectors"
+pixel_micron_dir = core_dir / "pixel_to_micron_measurement"
 sys.path.append(str(core_dir))
 sys.path.append(str(yolo_dir))
 sys.path.append(str(detectors_dir))
+sys.path.append(str(pixel_micron_dir))
 
 try:
     from tiff_converter import main as convert_nd2_to_tiff  # type: ignore
@@ -50,6 +53,7 @@ try:
     from yolo_train import main as train_yolo_model  # type: ignore
     from yolo_detection import main as run_yolo_detection  # type: ignore
     from yolo_background_removal import main as run_yolo_background_removal  # type: ignore
+    from process_nd2_measurements import process_nd2_files  # type: ignore
 except ImportError:
     # This will be resolved at runtime when sys.path is set
     convert_nd2_to_tiff = None
@@ -58,6 +62,7 @@ except ImportError:
     train_yolo_model = None
     run_yolo_detection = None
     run_yolo_background_removal = None
+    process_nd2_files = None
 
 # Detector imports will be handled dynamically due to parentheses in filenames
 run_lignin_detection = None
@@ -129,6 +134,7 @@ class AlfalfaPipeline:
     def _default_config(self) -> Dict[str, Any]:
         """Default configuration parameters"""
         return {
+            "run_nd2_measurements": True,
             "run_tiff_conversion": True,
             "run_jpg_conversion": True,
             "run_yolo_data_yaml": True,
@@ -164,6 +170,25 @@ class AlfalfaPipeline:
             
         logger.info(f"Found {len(nd2_files)} ND2 files to process")
         return True
+    
+    def run_nd2_measurements(self) -> bool:
+        """Run ND2 measurements extraction"""
+        if not self.config["run_nd2_measurements"]:
+            logger.info("Skipping ND2 measurements (disabled in config)")
+            return True
+            
+        if process_nd2_files is None:
+            logger.error("ND2 measurements processor not available - check imports")
+            return False
+            
+        logger.info("Starting ND2 measurements extraction...")
+        try:
+            process_nd2_files()
+            logger.info("ND2 measurements extraction completed successfully")
+            return True
+        except Exception as e:
+            logger.error(f"ND2 measurements extraction failed: {e}")
+            return False
     
     def run_tiff_conversion(self) -> bool:
         """Run ND2 to TIFF conversion"""
@@ -460,15 +485,16 @@ class AlfalfaPipeline:
         logger.info("STARTING ALFALFA SEGMENTATION PIPELINE")
         logger.info("=" * 60)
         
-        # Check inputs only if TIFF or JPG conversion is enabled
-        if self.config["run_tiff_conversion"] or self.config["run_jpg_conversion"]:
+        # Check inputs only if ND2 measurements, TIFF or JPG conversion is enabled
+        if self.config["run_nd2_measurements"] or self.config["run_tiff_conversion"] or self.config["run_jpg_conversion"]:
             if not self.check_inputs():
                 return False
         else:
-            logger.info("Skipping ND2 file check (TIFF and JPG conversion are disabled)")
+            logger.info("Skipping ND2 file check (ND2 measurements, TIFF and JPG conversion are disabled)")
         
         # Run pipeline steps
         steps = [
+            ("ND2 Measurements", self.run_nd2_measurements),
             ("TIFF Conversion", self.run_tiff_conversion),
             ("JPG Conversion", self.run_jpg_conversion),
             ("Manual YOLO Setup", self.manual_pause_for_yolo_setup),
@@ -500,6 +526,7 @@ def main():
     
     parser = argparse.ArgumentParser(description="Alfalfa Segmentation Pipeline")
     parser.add_argument("--config", type=str, help="Path to config file")
+    parser.add_argument("--skip-nd2-measurements", action="store_true", help="Skip ND2 measurements extraction")
     parser.add_argument("--skip-tiff", action="store_true", help="Skip TIFF conversion")
     parser.add_argument("--skip-jpg", action="store_true", help="Skip JPG conversion")
     parser.add_argument("--skip-yolo-data-yaml", action="store_true", help="Skip YOLO data.yaml generation")
@@ -537,6 +564,8 @@ def main():
                 config = {}
     
     # Override with command line arguments
+    if args.skip_nd2_measurements:
+        config["run_nd2_measurements"] = False
     if args.skip_tiff:
         config["run_tiff_conversion"] = False
     if args.skip_jpg:

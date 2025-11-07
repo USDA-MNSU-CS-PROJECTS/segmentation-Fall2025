@@ -7,15 +7,16 @@ I've created a comprehensive YOLO-based segmentation pipeline for your alfalfa p
 ### 🏗️ **Core Pipeline Components**
 
 1. **`pipeline.py`** - Main orchestrator that runs the complete workflow
-2. **ND2 → TIFF Conversion** - Converts Nikon microscopy files to standard TIFF format
-3. **TIFF → JPG Conversion** - Creates compressed images for visualization
-4. **Manual YOLO Setup** - User-guided training data preparation
-5. **YOLO Data.yaml Generation** - Automatic dataset configuration
-6. **YOLO Training** - Custom segmentation model training
-7. **YOLO Detection** - Inference on images using trained model
-8. **YOLO Background Removal** - AI-powered object isolation
-9. **Lignin Detection** - Automated lignin content analysis
-10. **Pectin Detection** - Automated pectin content analysis
+2. **ND2 Measurements Extraction** - Extracts pixel-to-micron measurements from ND2 files
+3. **ND2 → TIFF Conversion** - Converts Nikon microscopy files to standard TIFF format
+4. **TIFF → JPG Conversion** - Creates compressed images for visualization
+5. **Manual YOLO Setup** - User-guided training data preparation
+6. **YOLO Data.yaml Generation** - Automatic dataset configuration
+7. **YOLO Training** - Custom segmentation model training
+8. **YOLO Detection** - Inference on images using trained model
+9. **YOLO Background Removal** - AI-powered object isolation
+10. **Lignin Detection** - Automated lignin content analysis
+11. **Pectin Detection** - Automated pectin content analysis
 
 ### 🖥️ **Supercomputer Infrastructure**
 
@@ -38,9 +39,6 @@ I've created a comprehensive YOLO-based segmentation pipeline for your alfalfa p
 # Make setup script executable and run it
 chmod +x setup.sh
 ./setup.sh
-
-# Test your setup
-python test_pipeline.py
 ```
 
 ### **Step 2: Add Your Data**
@@ -53,7 +51,7 @@ python test_pipeline.py
 # Run complete pipeline
 python src/main/pipeline/pipeline.py
 
-# Or run with custom options
+# Or run with custom options (just an example)
 python src/main/pipeline/pipeline.py --yolo-epochs 50 --yolo-batch-size 8
 ```
 
@@ -91,6 +89,11 @@ The pipeline will automatically:
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              ALFALFA PIPELINE                           │
 └─────────────────────────────────────────────────────────────────────────┘
+
+Stage 0: ND2 Measurements Extraction
+  📂 src/data/nd2_images/input_images/*.nd2
+  │
+  └─→ 📤 src/data/detector_results/nd2_micron_measurements.csv
 
 Stage 1: ND2 → TIFF
   📂 src/data/nd2_images/input_images/*.nd2
@@ -148,6 +151,19 @@ Stage 9: Pectin Detection
 ```
 
 ## 🔧 **What Each Stage Does**
+
+### **Stage 0: ND2 Measurements Extraction**
+
+📂 **Input**: `src/data/nd2_images/input_images/*.nd2`
+
+- Reads ND2 microscopy files and extracts pixel-to-micron conversion measurements
+- Uses metadata from ND2 files when available, falls back to constant value if not
+- Extracts image dimensions and calculates measurements in microns
+
+📤 **Output**: `src/data/detector_results/nd2_micron_measurements.csv`
+
+- CSV file containing pixel-to-micron conversion ratios, image dimensions, and calculated measurements
+- This data is used to ensure accurate measurements throughout the pipeline
 
 ### **Stage 1: ND2 → TIFF Conversion**
 
@@ -249,12 +265,13 @@ Stage 9: Pectin Detection
 - `combined_pectin_results.csv` - Analysis results
 - `visualizations/` - Images with pectin regions highlighted
 
-## ⚙️ **Configuration Options**
+## ⚙️ **Configuration Options** (IMPORTANT!!!)
 
 ### **Pipeline Config** (`config/pipeline_config.json`)
 
 ```json
 {
+  "run_nd2_measurements": true,
   "run_tiff_conversion": true,
   "run_jpg_conversion": true,
   "run_yolo_data_yaml": true,
@@ -264,7 +281,7 @@ Stage 9: Pectin Detection
   "run_lignin_detection": true,
   "run_pectin_detection": true,
   "max_images": null,
-  "yolo_epochs": 100,
+  "yolo_epochs": 150,
   "yolo_batch_size": 4,
   "yolo_image_size": 640,
   "yolo_conf_threshold": 0.25,
@@ -328,7 +345,7 @@ After running the pipeline, you'll have:
 
 ### **Manual Setup Step**
 
-**Critical**: The pipeline includes a manual pause step where you must set up your YOLO training data:
+**Critical (can be downloaded from Handover Materials, but may need more manual annotations. This is explained more in the handover documentation)**: The pipeline includes a manual pause step where you must set up your YOLO training data:
 
 1. **Create folder structure** in `src/data/yolo_train/`
 2. **Add training images** to `images/` folder

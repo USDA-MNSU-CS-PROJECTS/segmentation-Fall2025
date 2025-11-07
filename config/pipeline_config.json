@@ -1,4 +1,5 @@
 {
+  "run_nd2_measurements": true,
   "run_tiff_conversion": true,
   "run_jpg_conversion": true,
   "run_yolo_data_yaml": true,

@@ -6,6 +6,14 @@ This directory contains the core image analysis tools for the alfalfa segmentati
 
 Follow these steps **in exact order** for the full image analysis pipeline:
 
+### **Step 0: Extract ND2 Measurements**
+
+```bash
+python pixel_to_micron_measurement/process_nd2_measurements.py
+```
+
+**Purpose**: Extracts pixel-to-micron conversion measurements from ND2 files before conversion. Uses metadata when available, falls back to constant value if not.
+
 ### **Step 1: Convert ND2 to TIFF**
 
 ```bash
@@ -99,6 +107,19 @@ python detectors/"Pectin(RR)_detector.py" --batch --debug
 ---
 
 ## 🔧 **Individual Tool Descriptions**
+
+### **process_nd2_measurements.py**
+
+Extracts pixel-to-micron measurements from ND2 files.
+
+- **Input**: ND2 files in `src/data/nd2_images/input_images/`
+- **Output**: CSV file `src/data/detector_results/nd2_micron_measurements.csv`
+- **Purpose**: Extracts pixel-to-micron conversion ratios, image dimensions, and calculated measurements in microns
+- **Usage**:
+  ```bash
+  python pixel_to_micron_measurement/process_nd2_measurements.py
+  ```
+- **Note**: This step runs automatically in the pipeline before TIFF conversion
 
 ### **tiff_converter.py**
 
@@ -235,15 +256,20 @@ src/main/core/
 ├── README.md                           # This file
 ├── tiff_converter.py                  # ND2 → TIFF conversion
 ├── jpg_converter.py                   # TIFF → JPG conversion
-├── image_preprocessing.py             # Background removal
+├── image_preprocessing.py             # Background removal (deprecated)
+├── pixel_to_micron_measurement/       # Pixel-to-micron measurement utilities
+│   ├── process_nd2_measurements.py    # Extract measurements from ND2 files
+│   └── README.md                       # Measurement utilities documentation
 ├── detectors/                         # Image analysis detectors
 │   ├── Lignin(PG)_detector.py         # Lignin detection
-│   └── Pectin(RR)_detector.py         # Pectin detection
+│   ├── Pectin(RR)_detector.py         # Pectin detection
+│   └── README.md                       # Detector documentation
 └── yolo/                              # YOLO segmentation tools
     ├── yolo_data_yaml_generator.py    # YOLO dataset config
     ├── yolo_train.py                  # YOLO model training
     ├── yolo_detection.py              # YOLO inference
-    └── yolo_background_removal.py     # YOLO background removal
+    ├── yolo_background_removal.py     # YOLO background removal
+    └── README.md                       # YOLO workflow documentation
 ```
 
 ---
@@ -253,6 +279,9 @@ src/main/core/
 ### **Basic Workflow**
 
 ```bash
+# 0. Extract ND2 measurements (optional but recommended)
+python pixel_to_micron_measurement/process_nd2_measurements.py
+
 # 1. Convert ND2 files
 python tiff_converter.py
 

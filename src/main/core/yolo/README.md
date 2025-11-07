@@ -49,7 +49,7 @@ Based on analysis of all 4 YOLO files, here's the complete folder structure and 
 
 **Great news!** We've already prepared a complete dataset for you to get started immediately (FOUND IN HANDOVER DOCUMENTS):
 
-### **✅ Ready-to-Use Dataset (MAY NEED UPDATING)**
+### **✅ Ready-to-Use Dataset (found in handover materials)**
 
 - **150 annotated images** in `src/data/yolo_train/images/`
 - **150 corresponding labels** in `src/data/yolo_train/labels/`
@@ -470,7 +470,7 @@ python yolo_background_removal.py
 ## ⚠️ **Important Notes**
 
 1. **✅ Ready to Use**: The model is already trained and ready for detection/inference
-2. **Dataset Available**: 150 annotated images with corresponding labels are included
+2. **Dataset Available**: 150 annotated images with corresponding labels are included in handover docs
 3. **File Formats**: All scripts expect JPG/PNG images, not ND2/TIFF
 4. **Memory Usage**: Large images (5000x5000) require significant RAM/VRAM
 5. **GPU Recommended**: Detection/inference benefits from CUDA acceleration
