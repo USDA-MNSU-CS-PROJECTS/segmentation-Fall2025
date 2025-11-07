@@ -22,6 +22,7 @@ The pipeline processes microscopy images (`.nd2` format) through a complete work
 7. **YOLO Background Removal** - AI-powered object isolation
 8. **Lignin Detection** - Analyze lignin content in processed images
 9. **Pectin Detection** - Analyze pectin content in processed images
+10. **Visualize YOLO Training Results** - Outputting png graphs of trained results
 
 **Current Status**: Complete YOLO-based segmentation pipeline with detector analysis ✅  
 **Key Features**: Automated training, detection, background removal, and chemical composition analysis
@@ -55,12 +56,6 @@ Results will inform USDA research on alfalfa improvement and provide insights in
 - ✅ **YOLO Background Removal** (`yolo_background_removal.py`) - AI-powered object isolation
 - ✅ **YOLO Data Preparation** (`yolo_data_yaml_generator.py`) - Generate training datasets
 
-### **Upcoming Features** (Advanced Analysis)
-
-- 🔄 **Enhanced Detection Models** - Improved segmentation accuracy
-- 🔄 **Batch Processing Optimization** - Faster processing for large datasets
-- 🔄 **Advanced Visualization** - Better result visualization and analysis tools
-
 ---
 
 ## Repository Structure
@@ -75,7 +70,9 @@ alfalfa-segmentation/
 ├── scripts/
 │   ├── slurm_job.sh           # SLURM job script
 │   ├── pbs_job.sh            # PBS job script
-|   └── count_jpg_images.py   # Simple script to count amount of JPGs
+│   ├── count_jpg_images.py   # Simple script to count amount of JPGs
+│   ├── visualize_comprehensive.py   # Visualize key metrics to one graph
+│   └── visualize_results.py        # Visualize the results.csv: Basic 4-panel box detection metrics
 └── src/
     ├── data/
     │   ├── nd2_images/
@@ -120,6 +117,16 @@ alfalfa-segmentation/
             ├── README.md               # Pipeline documentation
             └── SUPERCOMPUTER_GUIDE.md  # Supercomputer usage guide
 ```
+
+---
+
+## Quick notes from Team Lead:
+
+Sorry if the repo setup is confusing, you may come across different inputs and outputs that may be confusing and not really make sense. The main idea is when the pipeline is done running there will be a ton of new folders generated and there is a ton of data that gets preprocessed and analyzed, so the idea was to build the repo around the pipeline and ensuring it works. The pipeline readme has explenations for all the different inputs and outputs, so take a look through that if needed. This should better explain the structure of the repo and how to run specific files and what is needed for specific files to be ran.
+
+The Repository Structure found above is 100% accurate, even if they dont exist right now, they will exist at some point when running the pipeline or individual files found in the src/main/core/ directory.
+
+All of this is explained even deeper in the YouTube videos I supplied a link for above.
 
 ---
 
@@ -280,6 +287,13 @@ work in progress)
    python src/main/core/detectors/"Pectin(RR)_detector.py" --batch
    ```
 
+   **Visualize YOLO Training Results:**
+
+   ```bash
+   python scripts/visualize_results.py  # Basic 4-panel box detection metrics
+   python scripts/visualize_comprehensive.py  # Comprehensive metrics and segmentation analysis
+   ```
+
    **Run Complete Pipeline:**
 
    ```bash
@@ -297,6 +311,7 @@ work in progress)
 - `--skip-yolo-bg-removal`: Skip YOLO background removal
 - `--skip-lignin-detection`: Skip lignin detection
 - `--skip-pectin-detection`: Skip pectin detection
+- `--skip-yolo-visualization`: Skip YOLO training results visualization
 - `--yolo-epochs N`: Set number of training epochs
 - `--yolo-batch-size N`: Set training batch size
 - `--yolo-image-size N`: Set training image size
@@ -352,7 +367,7 @@ For detailed detector documentation, see: [`src/main/core/detectors/README.md`](
 
 ---
 
-## Supercomputer Usage (Large-Scale Processing)
+## Supercomputer Usage (Large-Scale Processing) IF NEEDED
 
 **⚠️ For processing thousands of images on supercomputers, see the [Supercomputer Guide](src/main/pipeline/SUPERCOMPUTER_GUIDE.md)**
 

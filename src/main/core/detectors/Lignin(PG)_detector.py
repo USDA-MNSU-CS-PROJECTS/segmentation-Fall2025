@@ -38,33 +38,30 @@ import numpy as np
 from ultralytics import YOLO
 
 # HSV color range settings for lignin (red) detection
+# More conservative ranges to reduce false positive detection
 HSV_RANGES = {
-    # Deep red / burgundy (high pectin concentration)
-    'deep_red_lower': [0, 150, 100],
-    'deep_red_upper': [15, 255, 255],
-    'deep_red_lower2': [165, 150, 100],
+    # Deep red / burgundy
+    'deep_red_lower': [0, 135, 40],
+    'deep_red_upper': [10, 255, 255],
+    'deep_red_lower2': [170, 135, 40],
     'deep_red_upper2': [180, 255, 255],
 
-    # Reddish brown / orange-brown (cell wall structures, lower staining intensity)
-    'brown_lower': [5, 120, 80],
-    'brown_upper': [25, 255, 220],
-    'brown_lower2': [160, 120, 80],
-    'brown_upper2': [180, 255, 220]
+    # Reddish-brown with slight red extension (for #c4716d)
+    'brown_lower': [4, 90, 60],
+    'brown_upper': [17, 255, 210],
+    'brown_lower2': [160, 90, 60],
+    'brown_upper2': [176, 255, 210]
 }
 
-
-
 def list_jpg_files(folder: Path) -> List[Path]:
-    """Return list of jpg/jpeg files in folder (non-recursive) containing '_PG'."""
+    """Return list of PG-stained jpg/jpeg files in folder (non-recursive)."""
     if not folder.exists():
         raise FileNotFoundError(f"Input folder not found: {folder}")
-    files = [
-        p for p in folder.iterdir()
-        if p.suffix.lower() in {'.jpg', '.jpeg'} and '_PG' in p.name and '_nobg' in p.name
-    ]
+    # Filter for PG-stained images only (lignin detection)
+    files = [p for p in folder.iterdir() 
+             if p.suffix.lower() in {'.jpg', '.jpeg'} and '_PG_' in p.name and '_nobg' in p.name]
     files.sort()
     return files
-
 
 
 def find_best_weights(repo_root: Path) -> Path:

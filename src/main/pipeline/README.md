@@ -17,6 +17,7 @@ I've created a comprehensive YOLO-based segmentation pipeline for your alfalfa p
 9. **YOLO Background Removal** - AI-powered object isolation
 10. **Lignin Detection** - Automated lignin content analysis
 11. **Pectin Detection** - Automated pectin content analysis
+12. **YOLO Training Results Visualization** - Generates visualization graphs from training metrics
 
 ### 🖥️ **Supercomputer Infrastructure**
 
@@ -82,6 +83,7 @@ The pipeline will automatically:
 - Remove backgrounds using the trained model
 - Analyze lignin content in processed images
 - Analyze pectin content in processed images
+- Generate visualization graphs from YOLO training metrics
 
 ## 📊 **Complete Workflow Diagram**
 
@@ -148,6 +150,14 @@ Stage 9: Pectin Detection
   └─→ 📤 src/data/detector_results/pectin_detector_results/
       ├── combined_pectin_results.csv
       └── visualizations/*_detected.jpg
+
+Stage 10: YOLO Training Results Visualization
+  📂 src/data/yolo_results/runs/segment/<latest-run>/results.csv
+  │
+  └─→ 📤 src/data/yolo_results/
+      ├── yolo_metrics_visualization.png (from visualize_results.py)
+      ├── yolo_metrics_combined.png (from visualize_comprehensive.py)
+      └── yolo_segmentation_metrics.png (from visualize_comprehensive.py)
 ```
 
 ## 🔧 **What Each Stage Does**
@@ -265,6 +275,25 @@ Stage 9: Pectin Detection
 - `combined_pectin_results.csv` - Analysis results
 - `visualizations/` - Images with pectin regions highlighted
 
+### **Stage 10: YOLO Training Results Visualization**
+
+📂 **Input**: `src/data/yolo_results/runs/segment/<latest-run>/results.csv`
+
+- Automatically finds the most recent training run folder
+- Reads training metrics from results.csv
+
+📤 **Output**: `src/data/yolo_results/`
+
+- `yolo_metrics_visualization.png` - Basic 4-panel box detection metrics visualization
+- `yolo_metrics_combined.png` - Combined metrics overview graph
+- `yolo_segmentation_metrics.png` - Detailed segmentation metrics analysis (4 subplots)
+
+**What it does:**
+
+- Creates visualizations of YOLO training performance metrics
+- Shows precision, recall, mAP50, and mAP50-95 for both box and mask detection
+- Generates statistical summaries of training performance
+
 ## ⚙️ **Configuration Options** (IMPORTANT!!!)
 
 ### **Pipeline Config** (`config/pipeline_config.json`)
@@ -280,6 +309,7 @@ Stage 9: Pectin Detection
   "run_yolo_background_removal": true,
   "run_lignin_detection": true,
   "run_pectin_detection": true,
+  "run_yolo_visualization": true,
   "max_images": null,
   "yolo_epochs": 150,
   "yolo_batch_size": 4,

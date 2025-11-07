@@ -8,6 +8,7 @@
   "run_yolo_background_removal": true,
   "run_lignin_detection": true,
   "run_pectin_detection": true,
+  "run_yolo_visualization": true,
   "max_images": null,
   "yolo_epochs": 150,
   "yolo_batch_size": 4,

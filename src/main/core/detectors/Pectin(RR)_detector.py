@@ -38,31 +38,29 @@ import numpy as np
 from ultralytics import YOLO
 
 # HSV color range settings for Ruthenium Red stained pectin
-# Targeting deep red/burgundy (high pectin) and reddish brown/orange-brown (cell wall structures)
+# More restrictive ranges to avoid over-detection - focus on strong RR staining
 HSV_RANGES = {
-    # Deep red / burgundy
-    'deep_red_lower': [0, 130, 35],
-    'deep_red_upper': [15, 255, 255],
-    'deep_red_lower2': [165, 130, 35],
-    'deep_red_upper2': [180, 255, 255],
-
-    # Reddish brown / orange-brown
-    'brown_lower': [3, 70, 55],
-    'brown_upper': [25, 255, 210],
-    'brown_lower2': [160, 70, 55],
-    'brown_upper2': [180, 255, 210]
+    # Primary red range (main RR staining)
+    'bright_red_lower': [0, 80, 60],     # Higher saturation and value for clear red
+    'bright_red_upper': [15, 255, 255],  # Narrow hue range for pure red
+    
+    # Deep red to burgundy range (high-intensity RR staining)
+    'deep_red_lower': [165, 80, 50],     # Higher saturation for clear burgundy
+    'deep_red_upper': [180, 255, 220],   # Limit brightness to avoid pink
+    
+    # Pink-red range (moderate RR staining) - more restrictive
+    'pink_lower': [150, 50, 80],         # Higher thresholds to avoid light areas
+    'pink_upper': [170, 180, 200],       # More focused pink-red range
 }
 
 
-
 def list_jpg_files(folder: Path) -> List[Path]:
-    """Return list of jpg/jpeg files in folder (non-recursive) containing '_PG'."""
+    """Return list of RR-stained jpg/jpeg files in folder (non-recursive)."""
     if not folder.exists():
         raise FileNotFoundError(f"Input folder not found: {folder}")
-    files = [
-        p for p in folder.iterdir()
-        if p.suffix.lower() in {'.jpg', '.jpeg'} and '_' in p.name and '_nobg' in p.name
-    ]
+    # Filter for RR-stained images only (pectin detection)
+    files = [p for p in folder.iterdir() 
+             if p.suffix.lower() in {'.jpg', '.jpeg'} and '_RR_' in p.name and '_nobg' in p.name]
     files.sort()
     return files
 
@@ -192,31 +190,27 @@ def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: 
     # Convert to HSV color space
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    # Use configured HSV ranges for RR-stained pectin detection
-    # Deep red/burgundy detection (high pectin concentration)
-    deep_red_lower1 = np.array(HSV_RANGES['deep_red_lower'])
-    deep_red_upper1 = np.array(HSV_RANGES['deep_red_upper'])
-    deep_red_lower2 = np.array(HSV_RANGES['deep_red_lower2'])
-    deep_red_upper2 = np.array(HSV_RANGES['deep_red_upper2'])
+    # Use more restrictive HSV ranges for RR-stained pectin detection
+    # Primary red range (main RR staining)
+    bright_red_lower = np.array(HSV_RANGES['bright_red_lower'])
+    bright_red_upper = np.array(HSV_RANGES['bright_red_upper'])
     
-    # Reddish brown/orange-brown detection (cell wall structures)
-    brown_lower1 = np.array(HSV_RANGES['brown_lower'])
-    brown_upper1 = np.array(HSV_RANGES['brown_upper'])
-    brown_lower2 = np.array(HSV_RANGES['brown_lower2'])
-    brown_upper2 = np.array(HSV_RANGES['brown_upper2'])
+    # Deep red to burgundy range (high-intensity RR staining)
+    deep_red_lower = np.array(HSV_RANGES['deep_red_lower'])
+    deep_red_upper = np.array(HSV_RANGES['deep_red_upper'])
     
-    # Create masks for deep red ranges
-    deep_red_mask1 = cv2.inRange(hsv, deep_red_lower1, deep_red_upper1)
-    deep_red_mask2 = cv2.inRange(hsv, deep_red_lower2, deep_red_upper2)
-    deep_red_mask = cv2.bitwise_or(deep_red_mask1, deep_red_mask2)
+    # Pink-red range (moderate RR staining)
+    pink_lower = np.array(HSV_RANGES['pink_lower'])
+    pink_upper = np.array(HSV_RANGES['pink_upper'])
     
-    # Create masks for brown ranges
-    brown_mask1 = cv2.inRange(hsv, brown_lower1, brown_upper1)
-    brown_mask2 = cv2.inRange(hsv, brown_lower2, brown_upper2)
-    brown_mask = cv2.bitwise_or(brown_mask1, brown_mask2)
+    # Create masks for the three color ranges
+    bright_red_mask = cv2.inRange(hsv, bright_red_lower, bright_red_upper)
+    deep_red_mask = cv2.inRange(hsv, deep_red_lower, deep_red_upper)
+    pink_mask = cv2.inRange(hsv, pink_lower, pink_upper)
     
     # Combine all pectin-related regions
-    pectin_mask = cv2.bitwise_or(deep_red_mask, brown_mask)
+    pectin_mask = cv2.bitwise_or(bright_red_mask, deep_red_mask)
+    pectin_mask = cv2.bitwise_or(pectin_mask, pink_mask)
 
     # Optional morphological cleaning to remove small noise
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -635,8 +629,12 @@ def main():
             # Get input folder from CLI arg or code configuration
             if args.input:
                 input_folder = Path(args.input)
+                if not input_folder.is_absolute():
+                    input_folder = repo_root / input_folder
             else:
                 input_folder = Path(SINGLE_INPUT_FOLDER)
+                if not input_folder.is_absolute():
+                    input_folder = repo_root / input_folder
             
             if not input_folder.exists():
                 print(f"Error: Input folder not found: {input_folder}")

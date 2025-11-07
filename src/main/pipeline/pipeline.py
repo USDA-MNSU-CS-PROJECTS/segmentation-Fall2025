@@ -17,6 +17,7 @@ Pipeline stages:
 8. YOLO background removal - Removes background using trained segmentation model
 9. Lignin detection - Detects lignin regions in processed images
 10. Pectin detection - Detects pectin regions in processed images
+11. YOLO training results visualization - Generates visualization graphs from training metrics
 
 Key features:
 - Configurable pipeline execution (can skip individual stages)
@@ -143,6 +144,7 @@ class AlfalfaPipeline:
             "run_yolo_background_removal": True,
             "run_lignin_detection": True,
             "run_pectin_detection": True,
+            "run_yolo_visualization": True,
             "max_images": None,  # None = process all
             "yolo_epochs": 100,
             "yolo_batch_size": 4,
@@ -479,6 +481,62 @@ class AlfalfaPipeline:
             logger.error(f"Pectin detection failed: {e}")
             return False
     
+    def run_yolo_visualization(self) -> bool:
+        """Run YOLO training results visualization"""
+        if not self.config["run_yolo_visualization"]:
+            logger.info("Skipping YOLO visualization (disabled in config)")
+            return True
+        
+        logger.info("Starting YOLO training results visualization...")
+        try:
+            # Import the visualization scripts
+            import subprocess
+            import sys
+            
+            # Get the scripts directory path
+            scripts_dir = self.src_dir / "scripts"
+            
+            # Run visualize_results.py
+            visualize_results_script = scripts_dir / "visualize_results.py"
+            if visualize_results_script.exists():
+                logger.info("Running basic visualization (visualize_results.py)...")
+                result = subprocess.run(
+                    [sys.executable, str(visualize_results_script)],
+                    cwd=str(scripts_dir),
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    logger.warning(f"visualize_results.py returned non-zero exit code: {result.stderr}")
+                else:
+                    logger.info("Basic visualization completed successfully")
+            else:
+                logger.warning(f"visualize_results.py not found at {visualize_results_script}")
+            
+            # Run visualize_comprehensive.py
+            visualize_comprehensive_script = scripts_dir / "visualize_comprehensive.py"
+            if visualize_comprehensive_script.exists():
+                logger.info("Running comprehensive visualization (visualize_comprehensive.py)...")
+                result = subprocess.run(
+                    [sys.executable, str(visualize_comprehensive_script)],
+                    cwd=str(scripts_dir),
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode != 0:
+                    logger.warning(f"visualize_comprehensive.py returned non-zero exit code: {result.stderr}")
+                else:
+                    logger.info("Comprehensive visualization completed successfully")
+            else:
+                logger.warning(f"visualize_comprehensive.py not found at {visualize_comprehensive_script}")
+            
+            logger.info("YOLO visualization completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"YOLO visualization failed: {e}")
+            return False
+    
     def run_full_pipeline(self) -> bool:
         """Run the complete pipeline"""
         logger.info("=" * 60)
@@ -503,7 +561,8 @@ class AlfalfaPipeline:
             ("YOLO Detection", self.run_yolo_detection),
             ("YOLO Background Removal", self.run_yolo_background_removal),
             ("Lignin Detection", self.run_lignin_detection),
-            ("Pectin Detection", self.run_pectin_detection)
+            ("Pectin Detection", self.run_pectin_detection),
+            ("YOLO Visualization", self.run_yolo_visualization)
         ]
         
         for step_name, step_func in steps:
@@ -535,6 +594,7 @@ def main():
     parser.add_argument("--skip-yolo-bg-removal", action="store_true", help="Skip YOLO background removal")
     parser.add_argument("--skip-lignin-detection", action="store_true", help="Skip lignin detection")
     parser.add_argument("--skip-pectin-detection", action="store_true", help="Skip pectin detection")
+    parser.add_argument("--skip-yolo-visualization", action="store_true", help="Skip YOLO training results visualization")
     parser.add_argument("--max-images", type=int, help="Maximum number of images to process")
     parser.add_argument("--yolo-epochs", type=int, help="Number of YOLO training epochs")
     parser.add_argument("--yolo-batch-size", type=int, help="YOLO training batch size")
@@ -582,6 +642,8 @@ def main():
         config["run_lignin_detection"] = False
     if args.skip_pectin_detection:
         config["run_pectin_detection"] = False
+    if args.skip_yolo_visualization:
+        config["run_yolo_visualization"] = False
     if args.max_images:
         config["max_images"] = args.max_images
     if args.yolo_epochs:
