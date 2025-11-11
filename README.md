@@ -132,7 +132,8 @@ All of this is explained even deeper in the YouTube videos I supplied a link for
 
 ## ⚠️ **Important Setup Notes**
 
-> [!NOTE] > **For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
+> [!NOTE]
+> **For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
 
 ### **📁 Automatic Folder Creation**
 
