@@ -132,8 +132,7 @@ All of this is explained even deeper in the YouTube videos I supplied a link for
 
 ## ⚠️ **Important Setup Notes**
 
-> [!NOTE]
-> **For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
+> [!NOTE] > **For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
 
 ### **📁 Automatic Folder Creation**
 
@@ -371,7 +370,8 @@ For detailed detector documentation, see: [`src/main/core/detectors/README.md`](
 
 ## Supercomputer Usage (Large-Scale Processing) IF NEEDED
 
-> [!NOTE] > **⚠️ For processing thousands of images on supercomputers, see the [Supercomputer Guide](src/main/pipeline/SUPERCOMPUTER_GUIDE.md)**
+> [!NOTE]
+> **⚠️ For processing thousands of images on supercomputers, see the [Supercomputer Guide](src/main/pipeline/SUPERCOMPUTER_GUIDE.md)**
 
 ### Quick Supercomputer Start
 
