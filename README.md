@@ -132,7 +132,8 @@ All of this is explained even deeper in the YouTube videos I supplied a link for
 
 ## ⚠️ **Important Setup Notes**
 
-**For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
+> [!NOTE]
+> **For New Users**: Some folders in `src/data/` will be created automatically when you run the scripts, while others require manual setup:
 
 ### **📁 Automatic Folder Creation**
 
@@ -218,10 +219,11 @@ Recommended Python version: **3.10+** (tested with 3.12)
    pip install -r requirements.txt
    ```
 
-**⚠️ WARNING 1:** Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work (pipeline
-work in progress)
+> [!WARNING]
+> Try not to push up or commit any .nd2 or .tiff images, this may break the repository. Instead, just run things locally and use the pipeline in any future work
 
-**⚠️ WARNING 2:** Also please do not push up the pipeline_config.json file if you make changes there, also do not push up the data.yaml file that may be changed when running the pipeline with the yolo_data_yaml_generator.py
+> [!WARNING]
+> Also please do not push up the pipeline_config.json file if you make changes there, also do not push up the data.yaml file that may be changed when running the pipeline with the yolo_data_yaml_generator.py
 
 2. **Add Images**: Place your `.nd2` files into: `src/data/nd2_images/input_images`
 
@@ -369,7 +371,7 @@ For detailed detector documentation, see: [`src/main/core/detectors/README.md`](
 
 ## Supercomputer Usage (Large-Scale Processing) IF NEEDED
 
-**⚠️ For processing thousands of images on supercomputers, see the [Supercomputer Guide](src/main/pipeline/SUPERCOMPUTER_GUIDE.md)**
+> [!NOTE] > **⚠️ For processing thousands of images on supercomputers, see the [Supercomputer Guide](src/main/pipeline/SUPERCOMPUTER_GUIDE.md)**
 
 ### Quick Supercomputer Start
 
