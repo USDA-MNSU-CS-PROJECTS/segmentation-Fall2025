@@ -53,6 +53,77 @@ HSV_RANGES = {
     'pink_upper': [170, 180, 200],       # More focused pink-red range
 }
 
+# Fallback constant pixel-to-micron conversion (used if ND2 measurements not available)
+PIXEL_TO_MICRON_FALLBACK = 0.9785316641067333
+
+
+def load_nd2_measurements(repo_root: Path) -> dict:
+    """Load ND2 measurements CSV and create lookup dictionary.
+    
+    Returns:
+        Dictionary mapping base image names to pixel_microns values
+    """
+    measurements_csv = repo_root / "src/data/detector_results/nd2_micron_measurements.csv"
+    lookup = {}
+    
+    if not measurements_csv.exists():
+        return lookup
+    
+    try:
+        with measurements_csv.open('r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                image_name = row.get('image_name', '')
+                pixel_microns = row.get('pixel_microns', '')
+                
+                if image_name and pixel_microns:
+                    try:
+                        # Extract base name (remove .nd2 and suffixes like _burned_recent)
+                        base_name = image_name.replace('.nd2', '').split('_burned')[0].split('_recent')[0]
+                        # Remove any remaining .nd2 extensions
+                        base_name = base_name.replace('.nd2', '')
+                        lookup[base_name] = float(pixel_microns)
+                    except (ValueError, AttributeError):
+                        continue
+    except Exception as e:
+        print(f"Warning: Could not load ND2 measurements: {e}")
+    
+    return lookup
+
+
+def get_pixel_microns(filename: str, nd2_lookup: dict, repo_root: Path) -> float:
+    """Get pixel-to-micron conversion factor for an image.
+    
+    Args:
+        filename: Image filename (e.g., '20240780a_T0_10xstitch_RR_nobg.jpg')
+        nd2_lookup: Dictionary from load_nd2_measurements()
+        repo_root: Repository root path
+        
+    Returns:
+        Pixel-to-micron conversion factor
+    """
+    # Extract base name from JPG filename
+    # Remove extension and common suffixes
+    base_name = filename.replace('.jpg', '').replace('.jpeg', '').replace('_nobg', '')
+    
+    # Try exact match first
+    if base_name in nd2_lookup:
+        return nd2_lookup[base_name]
+    
+    # Try matching without some suffixes that might differ
+    # Remove _removed, _detected, etc.
+    base_name_clean = base_name.split('_removed')[0].split('_detected')[0]
+    if base_name_clean in nd2_lookup:
+        return nd2_lookup[base_name_clean]
+    
+    # Try partial matching (match beginning of name)
+    for nd2_name, pixel_microns in nd2_lookup.items():
+        if base_name.startswith(nd2_name) or nd2_name.startswith(base_name):
+            return pixel_microns
+    
+    # Fallback to constant
+    return PIXEL_TO_MICRON_FALLBACK
+
 
 def list_jpg_files(folder: Path) -> List[Path]:
     """Return list of RR-stained jpg/jpeg files in folder (non-recursive)."""
@@ -165,7 +236,7 @@ def estimate_cell_mask_nonwhite(image: np.ndarray) -> Tuple[np.ndarray, int]:
     return cell_mask, 1
 
 
-def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: bool = False) -> Tuple[int, int, int, np.ndarray, np.ndarray]:
+def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, pixel_microns: float = None, debug: bool = False) -> Tuple[int, int, int, np.ndarray, np.ndarray]:
     """Detect pectin pixels in BGR image within cell region and return statistics.
 
     Uses HSV color space with multiple ranges for pectin (RR-stained).
@@ -173,7 +244,7 @@ def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: 
     Args:
         image: Input image (BGR format)
         cell_mask: Binary mask of cell region (optional). If None, uses entire image.
-        num_cells: Number of detected cells (for display)
+        pixel_microns: Pixel-to-micron conversion factor (optional). If None, uses fallback.
         debug: Enable debug prints
         
     Returns:
@@ -231,6 +302,15 @@ def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: 
     
     total_pixels = int(pectin_mask.shape[0] * pectin_mask.shape[1])
 
+    # Convert pixels to square microns if conversion factor is provided
+    if pixel_microns is None:
+        pixel_microns = PIXEL_TO_MICRON_FALLBACK
+    
+    # Convert pixel counts to square microns (area conversion: pixels * (microns/pixel)^2)
+    pectin_square_microns = pectin_count * (pixel_microns ** 2)
+    cell_square_microns = cell_pixels * (pixel_microns ** 2)
+    total_square_microns = total_pixels * (pixel_microns ** 2)
+
     # Create visualization
     vis_img = image.copy()
     
@@ -247,39 +327,39 @@ def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: 
     alpha = 0.5  # Transparency factor
     vis_img = cv2.addWeighted(vis_img, 1, overlay, alpha, 0)
     
-    # Add text with detection results
+    # Add text with detection results (show both pixels and microns)
     if cell_pixels > 0:
         ratio = pectin_count / cell_pixels
-        text1 = f"Pectin in cell: {ratio:.2%}"
-        text3 = f"Cell pixels: {cell_pixels:,}"
-        text4 = f"Pectin pixels: {pectin_count:,}"
+        text1 = f"Pectin in cross section: {ratio:.2%}"
+        text3 = f"Cross section area: {cell_square_microns:,.0f} um^2 ({cell_pixels:,} px)"
+        text4 = f"Pectin area in cross section: {pectin_square_microns:,.0f} um^2 ({pectin_count:,} px)"
     else:
         ratio = 0.0
-        text1 = "No cell detected"
+        text1 = "No cross section detected"
         text3 = ""
         text4 = ""
     
-    # Make text larger and bold with white outline for better visibility
+    # Make text smaller and positioned higher with white outline for better visibility
     # Dynamically scale font based on image size (works well for 5000x5000 canvas)
     h, w = vis_img.shape[:2]
-    base_scale = max(4.0, min(h, w) / 1200.0)  # ~4.2 for 5000px, grows with image size
+    base_scale = max(2.5, min(h, w) / 2000.0)  # ~2.5 for 5000px (smaller than before)
     font_scale_main = base_scale
-    font_scale_sub = base_scale * 0.8
-    thickness = max(6, int(base_scale * 2))  # Bold effect
+    font_scale_sub = base_scale * 0.75  # Slightly smaller sub text
+    thickness = max(4, int(base_scale * 1.5))  # Thinner for smaller text
 
     # Helper function to draw text with outline (bold)
     def draw_text_with_outline(img, text, pos, scale, color, thick):
         if not text:
             return
         # White outline (thicker for bold effect)
-        cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, (255, 255, 255), thick + 4, cv2.LINE_AA)
+        cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, (255, 255, 255), thick + 3, cv2.LINE_AA)
         # Black text (bold)
         cv2.putText(img, text, pos, cv2.FONT_HERSHEY_SIMPLEX, scale, color, thick, cv2.LINE_AA)
 
-    # Compute dynamic positions
-    x = int(50 * base_scale)
-    y = int(120 * base_scale)
-    step = int(90 * base_scale)
+    # Compute dynamic positions (moved up and left)
+    x = int(30 * base_scale)  # Moved left (was 50)
+    y = int(60 * base_scale)  # Moved up significantly (was 120)
+    step = int(65 * base_scale)  # Tighter spacing (was 90)
 
     draw_text_with_outline(vis_img, text1, (x, y), font_scale_main, (0, 0, 0), thickness)
     y += step
@@ -289,6 +369,7 @@ def detect_pectin_ratio(image: np.ndarray, cell_mask: np.ndarray = None, debug: 
 
     if debug:
         print(f"pectin_count={pectin_count}, cell_pixels={cell_pixels}, total_pixels={total_pixels}, ratio={ratio:.6f}")
+        print(f"pectin_square_microns={pectin_square_microns:.2f}, cell_square_microns={cell_square_microns:.2f}, pixel_microns={pixel_microns}")
 
     return pectin_count, cell_pixels, total_pixels, pectin_in_cell, vis_img
 
@@ -381,7 +462,7 @@ def extract_metadata_from_filename(filename: str, imageset: str) -> dict:
     return metadata
 
 
-def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path, conf: float = 0.25, mask_mode: str = 'auto', debug: bool = False) -> list:
+def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path, conf: float = 0.25, mask_mode: str = 'auto', debug: bool = False, repo_root: Path = None) -> list:
     """Process folder with custom visualization directory.
     
     This is a wrapper that sets up vis_dir and calls the main process_folder logic.
@@ -393,6 +474,18 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
 
     # Create output directory for visualizations
     vis_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load ND2 measurements for pixel-to-micron conversion
+    if repo_root is None:
+        script_dir = Path(__file__).resolve().parent
+        repo_root = script_dir.parent.parent.parent.parent
+    nd2_lookup = load_nd2_measurements(repo_root)
+    
+    # Inform user if using fallback conversion
+    if not nd2_lookup:
+        print(f"Note: ND2 measurements CSV not found. Using fallback pixel-to-micron conversion: {PIXEL_TO_MICRON_FALLBACK} µm/pixel")
+    else:
+        print(f"Loaded {len(nd2_lookup)} ND2 measurement(s) for pixel-to-micron conversion")
 
     results = []
     no_cell_count = 0
@@ -442,19 +535,28 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
                 if debug:
                     print(f"  Warning: No cell detected in {p.name}")
             
+            # Get pixel-to-micron conversion factor for this image
+            pixel_microns = get_pixel_microns(p.name, nd2_lookup, repo_root)
+            
             # Step 2: Detect pectin within cell region
             pectin_count, cell_pixels, total_pixels, pectin_mask, vis_img = detect_pectin_ratio(
-                img, cell_mask, debug=debug
+                img, cell_mask, pixel_microns=pixel_microns, debug=debug
             )
             
             # Calculate ratio based on cell area (not entire image)
             ratio = pectin_count / cell_pixels if cell_pixels > 0 else 0.0
             
+            # Convert to square microns
+            pectin_square_microns = pectin_count * (pixel_microns ** 2)
+            cell_square_microns = cell_pixels * (pixel_microns ** 2)
+            total_square_microns = total_pixels * (pixel_microns ** 2)
+            
             # Extract metadata from filename
             imageset = input_folder.name  # e.g., '20240630-20240644_10xstitch_RR'
             metadata = extract_metadata_from_filename(p.name, imageset)
             
-            results.append((p.name, pectin_count, cell_pixels, total_pixels, ratio, metadata))
+            results.append((p.name, pectin_count, cell_pixels, total_pixels, ratio, metadata, 
+                          pectin_square_microns, cell_square_microns, total_square_microns, pixel_microns))
 
             # Save visualization
             vis_path = vis_dir / f"{p.stem}_detected.jpg"
@@ -501,12 +603,24 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
             'Project', 'ImageSet', 'Location', 'Maturity', 'AlfalfaLine', 'ImageID', 'Year', 
             'LabID', 'CrossSection', 'IncubationTime_Hr', 'ImageType', 'Stain',
             'filename', 'pectin_pixel_count', 'cell_pixel_count', 'total_pixel_count', 
-            'pectin_ratio_in_cell', 'Percentage of Pectin'
+            'pectin_ratio_in_cell', 'Percentage of Pectin',
+            'pectin_area_square_microns', 'cell_area_square_microns', 'total_area_square_microns',
+            'pixel_to_micron_conversion'
         ])
         
         # Data rows
         for row in all_results:
-            filename, pectin_count, cell_pixels, total_pixels, ratio, metadata = row
+            if len(row) == 10:
+                # New format with micron measurements
+                filename, pectin_count, cell_pixels, total_pixels, ratio, metadata, pectin_square_microns, cell_square_microns, total_square_microns, pixel_microns = row
+            else:
+                # Legacy format (for backward compatibility)
+                filename, pectin_count, cell_pixels, total_pixels, ratio, metadata = row
+                pixel_microns = PIXEL_TO_MICRON_FALLBACK
+                pectin_square_microns = pectin_count * (pixel_microns ** 2)
+                cell_square_microns = cell_pixels * (pixel_microns ** 2)
+                total_square_microns = total_pixels * (pixel_microns ** 2)
+            
             writer.writerow([
                 metadata['Project'],
                 metadata['ImageSet'],
@@ -525,7 +639,11 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
                 cell_pixels,
                 total_pixels,
                 f"{ratio:.6f}",
-                f"{ratio:.2%}"
+                f"{ratio:.2%}",
+                f"{pectin_square_microns:.2f}",
+                f"{cell_square_microns:.2f}",
+                f"{total_square_microns:.2f}",
+                f"{pixel_microns:.10f}"
             ])
 
     print(f"\n✓ Wrote combined results for {len(all_results)} images to {output_csv}")
@@ -612,7 +730,7 @@ def main():
                 # Process folder and collect results
                 folder_results = process_folder_with_vis(
                     folder, yolo_model, vis_dir, 
-                    conf=args.conf, mask_mode=args.mask_mode, debug=args.debug
+                    conf=args.conf, mask_mode=args.mask_mode, debug=args.debug, repo_root=repo_root
                 )
                 all_results.extend(folder_results)
             
@@ -649,7 +767,7 @@ def main():
             # Process folder
             results = process_folder_with_vis(
                 input_folder, yolo_model, vis_dir,
-                conf=args.conf, mask_mode=args.mask_mode, debug=args.debug
+                conf=args.conf, mask_mode=args.mask_mode, debug=args.debug, repo_root=repo_root
             )
             
             # Write CSV
