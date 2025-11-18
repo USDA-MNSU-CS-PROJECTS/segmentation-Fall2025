@@ -311,6 +311,11 @@ def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, pixel_micr
     red_square_microns = red_count * (pixel_microns ** 2)
     cell_square_microns = cell_pixels * (pixel_microns ** 2)
     total_square_microns = total_pixels * (pixel_microns ** 2)
+    
+    # Convert square microns to square millimeters (1 micron = 0.001 mm, so 1 um^2 = 0.000001 mm^2)
+    red_square_mm = red_square_microns * 0.000001
+    cell_square_mm = cell_square_microns * 0.000001
+    total_square_mm = total_square_microns * 0.000001
 
     # Create visualization
     vis_img = image.copy()
@@ -328,12 +333,12 @@ def detect_red_ratio(image: np.ndarray, cell_mask: np.ndarray = None, pixel_micr
     alpha = 0.5  # Transparency factor
     vis_img = cv2.addWeighted(vis_img, 1, overlay, alpha, 0)
     
-    # Add text with detection results (show both pixels and microns)
+    # Add text with detection results (show pixels, microns, and millimeters)
     if cell_pixels > 0:
         ratio = red_count / cell_pixels
         text1 = f"Lignin in cross section: {ratio:.2%}"
-        text3 = f"Cross section area: {cell_square_microns:,.0f} um^2 ({cell_pixels:,} px)"
-        text4 = f"Lignin area in cross section: {red_square_microns:,.0f} um^2 ({red_count:,} px)"
+        text3 = f"Cross section area: {cell_square_microns:,.0f} um^2 ({cell_square_mm:.6f} mm^2) ({cell_pixels:,} px)"
+        text4 = f"Lignin area in cross section: {red_square_microns:,.0f} um^2 ({red_square_mm:.6f} mm^2) ({red_count:,} px)"
     else:
         ratio = 0.0
         text1 = "No cross section detected"
@@ -552,12 +557,18 @@ def process_folder_with_vis(input_folder: Path, yolo_model: YOLO, vis_dir: Path,
             cell_square_microns = cell_pixels * (pixel_microns ** 2)
             total_square_microns = total_pixels * (pixel_microns ** 2)
             
+            # Convert square microns to square millimeters (1 micron = 0.001 mm, so 1 um^2 = 0.000001 mm^2)
+            red_square_mm = red_square_microns * 0.000001
+            cell_square_mm = cell_square_microns * 0.000001
+            total_square_mm = total_square_microns * 0.000001
+            
             # Extract metadata from filename
             imageset = input_folder.name  # e.g., '20240630-20240644_10xstitch_PG'
             metadata = extract_metadata_from_filename(p.name, imageset)
             
             results.append((p.name, red_count, cell_pixels, total_pixels, ratio, metadata, 
-                          red_square_microns, cell_square_microns, total_square_microns, pixel_microns))
+                          red_square_microns, cell_square_microns, total_square_microns, pixel_microns,
+                          red_square_mm, cell_square_mm, total_square_mm))
 
             # Save visualization
             vis_path = vis_dir / f"{p.stem}_detected.jpg"
@@ -606,14 +617,21 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
             'filename', 'lignin_pixel_count', 'cell_pixel_count', 'total_pixel_count', 
             'lignin_ratio_in_cell', 'Percentage of Lignin',
             'lignin_area_square_microns', 'cell_area_square_microns', 'total_area_square_microns',
+            'lignin_area_square_mm', 'cell_area_square_mm', 'total_area_square_mm',
             'pixel_to_micron_conversion'
         ])
         
         # Data rows
         for row in all_results:
-            if len(row) == 10:
-                # New format with micron measurements
+            if len(row) == 13:
+                # New format with micron and millimeter measurements
+                filename, red_count, cell_pixels, total_pixels, ratio, metadata, red_square_microns, cell_square_microns, total_square_microns, pixel_microns, red_square_mm, cell_square_mm, total_square_mm = row
+            elif len(row) == 10:
+                # Format with micron measurements only (convert to mm)
                 filename, red_count, cell_pixels, total_pixels, ratio, metadata, red_square_microns, cell_square_microns, total_square_microns, pixel_microns = row
+                red_square_mm = red_square_microns * 0.000001
+                cell_square_mm = cell_square_microns * 0.000001
+                total_square_mm = total_square_microns * 0.000001
             else:
                 # Legacy format (for backward compatibility)
                 filename, red_count, cell_pixels, total_pixels, ratio, metadata = row
@@ -621,6 +639,9 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
                 red_square_microns = red_count * (pixel_microns ** 2)
                 cell_square_microns = cell_pixels * (pixel_microns ** 2)
                 total_square_microns = total_pixels * (pixel_microns ** 2)
+                red_square_mm = red_square_microns * 0.000001
+                cell_square_mm = cell_square_microns * 0.000001
+                total_square_mm = total_square_microns * 0.000001
             
             writer.writerow([
                 metadata['Project'],
@@ -644,6 +665,9 @@ def write_combined_csv(all_results: list, output_csv: Path) -> None:
                 f"{red_square_microns:.2f}",
                 f"{cell_square_microns:.2f}",
                 f"{total_square_microns:.2f}",
+                f"{red_square_mm:.6f}",
+                f"{cell_square_mm:.6f}",
+                f"{total_square_mm:.6f}",
                 f"{pixel_microns:.10f}"
             ])
 
