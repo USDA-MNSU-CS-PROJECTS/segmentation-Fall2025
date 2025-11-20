@@ -7,7 +7,11 @@ The pipeline processes microscopy images (`.nd2` format) through a complete work
 
 ## YouTube video link explaining entire process / repo:
 
-#put link here
+- [Main Playlist (Contains all Videos)](https://youtube.com/playlist?list=PLNrWlSFvnRP3vFYHja2j2lZMpaQrH8jaB&si=Bnql_Zz8k4jR_-dy)
+- [YOLO Training and Label Studio](https://youtu.be/TwrJalSPmZg?si=BI5vyfqroRnyFI7k)
+- [Getting Started with the Repo](https://youtu.be/8FK9ED296Dw?si=3RqdM-IUAh5XITUt)
+- [Our Results and Detections for end of the Pipeline](https://youtu.be/Dc6nJxCBxcE?si=DK0xaWCbAv3OyDdo)
+- [Future Steps](https://youtu.be/pfUqGqDT39U?si=YeNCDqThQJdvD3rU)
 
 ---
 
