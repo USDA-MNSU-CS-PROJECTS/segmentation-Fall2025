@@ -41,6 +41,40 @@ chemical_analyzer = ChemicalAnalyzer(config)
 results_manager = ResultsManager(config)
 
 
+def get_processed_images():
+    """Get list of processed JPG images for dropdown"""
+    processed_dir = config.processed_dir
+    if not processed_dir.exists():
+        return gr.Dropdown(choices=[])
+
+    jpg_files = list(processed_dir.glob("*.jpg"))
+    # Exclude segmented and original files
+    jpg_files = [f for f in jpg_files if "_segmented_" not in f.name and "_original" not in f.name]
+
+    if not jpg_files:
+        return gr.Dropdown(choices=[])
+
+    choices = [str(f) for f in sorted(jpg_files)]
+    # Return a Dropdown update with new choices
+    return gr.Dropdown(choices=choices, value=choices[0] if choices else None)
+
+
+def get_background_removed_images():
+    """Get list of background-removed PNG images for dropdown"""
+    processed_dir = config.processed_dir
+    if not processed_dir.exists():
+        return gr.Dropdown(choices=[])
+
+    png_files = list(processed_dir.glob("*_nobg_*.png"))
+
+    if not png_files:
+        return gr.Dropdown(choices=[])
+
+    choices = [str(f) for f in sorted(png_files)]
+    # Return a Dropdown update with new choices
+    return gr.Dropdown(choices=choices, value=choices[0] if choices else None)
+
+
 def create_upload_tab():
     """Tab 1: Upload and Process Images"""
     with gr.Tab("📤 Upload & Process"):
@@ -90,8 +124,8 @@ def create_upload_tab():
             inputs=[file_upload],
             outputs=[status_text, converted_gallery]
         )
-        
-        return file_upload, converted_gallery
+
+        return file_upload, converted_gallery, process_btn
 
 
 def create_segmentation_tab():
@@ -165,8 +199,8 @@ def create_segmentation_tab():
             inputs=[image_selector, confidence_slider],
             outputs=[seg_status, original_img, segmented_img, bg_removed_img]
         )
-        
-        return image_selector, segmented_img, bg_removed_img
+
+        return image_selector, segmented_img, bg_removed_img, segment_btn
 
 
 def create_chemical_analysis_tab():
@@ -431,11 +465,26 @@ def create_app():
         """)
 
         # Create tabs
-        upload_outputs = create_upload_tab()
-        seg_outputs = create_segmentation_tab()
-        chem_outputs = create_chemical_analysis_tab()
-        results_outputs = create_results_tab()
+        file_upload, converted_gallery, process_btn = create_upload_tab()
+        image_selector, segmented_img, bg_removed_img, segment_btn = create_segmentation_tab()
+        chem_image_selector, results_table = create_chemical_analysis_tab()
+        session_summary, results_gallery = create_results_tab()
         create_settings_tab()
+
+        # Wire up dropdown updates when images are processed
+        # Update segmentation dropdown when images are converted
+        process_btn.click(
+            fn=get_processed_images,
+            inputs=[],
+            outputs=[image_selector]
+        )
+
+        # Update chemical analysis dropdown when segmentation is complete
+        segment_btn.click(
+            fn=get_background_removed_images,
+            inputs=[],
+            outputs=[chem_image_selector]
+        )
 
         # Footer
         gr.Markdown("""
