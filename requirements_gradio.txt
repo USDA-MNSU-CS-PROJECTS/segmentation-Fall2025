@@ -1,0 +1,18 @@
+# Additional requirements for Gradio UI
+# Install with: pip install -r requirements_gradio.txt
+
+# Web interface framework
+gradio>=4.0.0
+
+# All other dependencies are already in requirements.txt:
+# - ultralytics (YOLO)
+# - opencv-python (image processing)
+# - numpy
+# - pandas (data handling)
+# - matplotlib (visualization)
+# - pillow (image manipulation)
+# - nd2 (microscopy format)
+# - tifffile (TIFF handling)
+
+# Optional: for Excel export
+openpyxl>=3.1.0

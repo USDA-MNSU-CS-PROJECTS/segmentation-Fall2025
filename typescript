@@ -1,0 +1,7 @@
+
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+bash: __augment_output_end_marker: command not found
+bash: __augment_output_end_marker: command not found
+[?1034hbash-3.2$ 
