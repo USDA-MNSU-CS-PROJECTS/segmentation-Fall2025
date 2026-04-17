@@ -55,7 +55,21 @@ class ChemicalAnalyzer:
             img = cv2.imread(str(image_path))
             if img is None:
                 return f"❌ Could not read image", None, None, pd.DataFrame()
-            
+
+            # Check if image is mostly white (background removal issue)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            non_white_pixels = np.sum(gray < 250)
+            total_image_pixels = gray.shape[0] * gray.shape[1]
+
+            print(f"\n[IMAGE CHECK]")
+            print(f"  Image: {image_path.name}")
+            print(f"  Size: {img.shape}")
+            print(f"  Non-white pixels: {non_white_pixels:,} / {total_image_pixels:,}")
+            print(f"  Non-white ratio: {non_white_pixels/total_image_pixels:.4f}")
+
+            if non_white_pixels < 100:
+                return "⚠️ Image appears to be completely white. Please check background removal.", None, None, pd.DataFrame()
+
             status_lines = ["🧪 Running chemical analysis...\n"]
             results = {}
             
@@ -101,12 +115,13 @@ class ChemicalAnalyzer:
         # Define red color range for lignin (PG staining)
         # Adjusted based on sensitivity setting
         sensitivity = self.config.lignin_sensitivity
-        
+
         # Red wraps around in HSV (0-10 and 170-180)
-        lower_red1 = np.array([0, 50, 50])
-        upper_red1 = np.array([10 + sensitivity, 255, 255])
-        
-        lower_red2 = np.array([170 - sensitivity, 50, 50])
+        # Made more permissive: lower saturation threshold, wider hue range
+        lower_red1 = np.array([0, 30, 30])  # Lower S and V thresholds
+        upper_red1 = np.array([10 + sensitivity * 2, 255, 255])  # Wider hue range
+
+        lower_red2 = np.array([170 - sensitivity * 2, 30, 30])  # Lower S and V thresholds
         upper_red2 = np.array([180, 255, 255])
         
         # Create masks
@@ -123,6 +138,14 @@ class ChemicalAnalyzer:
         lignin_pixels = np.sum(lignin_mask > 0)
         total_pixels = np.sum(non_white_mask)
         lignin_ratio = lignin_pixels / total_pixels if total_pixels > 0 else 0
+
+        # Debug output
+        print(f"\n[LIGNIN DEBUG]")
+        print(f"  Image shape: {img.shape}")
+        print(f"  Lignin pixels detected: {lignin_pixels:,}")
+        print(f"  Total non-white pixels: {total_pixels:,}")
+        print(f"  Ratio: {lignin_ratio:.6f}")
+        print(f"  Sensitivity: {sensitivity}")
         
         # Calculate area in microns (if conversion available)
         area_microns2 = lignin_pixels * (self.config.pixel_to_micron_fallback ** 2)
@@ -157,10 +180,11 @@ class ChemicalAnalyzer:
         
         # Define burgundy/deep red range for pectin (Ruthenium Red)
         sensitivity = self.config.pectin_sensitivity
-        
+
         # Burgundy color range (darker red-purple)
-        lower_burgundy = np.array([160 - sensitivity, 40, 40])
-        upper_burgundy = np.array([180, 255, 200])
+        # Made more permissive: wider hue range, lower thresholds
+        lower_burgundy = np.array([140 - sensitivity * 2, 20, 20])  # Wider range
+        upper_burgundy = np.array([180, 255, 255])  # Full saturation and value range
         
         pectin_mask = cv2.inRange(hsv, lower_burgundy, upper_burgundy)
         
@@ -173,6 +197,13 @@ class ChemicalAnalyzer:
         pectin_pixels = np.sum(pectin_mask > 0)
         total_pixels = np.sum(non_white_mask)
         pectin_ratio = pectin_pixels / total_pixels if total_pixels > 0 else 0
+
+        # Debug output
+        print(f"\n[PECTIN DEBUG]")
+        print(f"  Pectin pixels detected: {pectin_pixels:,}")
+        print(f"  Total non-white pixels: {total_pixels:,}")
+        print(f"  Ratio: {pectin_ratio:.6f}")
+        print(f"  Sensitivity: {sensitivity}")
         
         # Calculate area
         area_microns2 = pectin_pixels * (self.config.pixel_to_micron_fallback ** 2)

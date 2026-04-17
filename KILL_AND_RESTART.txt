@@ -1,0 +1,39 @@
+🔧 HOW TO RESTART THE UI (Manual)
+
+The automated terminal has issues, so please run these commands yourself:
+
+STEP 1: Kill the old UI
+=======================
+lsof -ti:7860 | xargs kill -9
+
+(This stops any process running on port 7860)
+
+
+STEP 2: Restart the UI
+=======================
+python3 gradio_app.py
+
+(Starts the UI with the dropdown fix)
+
+
+STEP 3: Refresh your browser
+=======================
+Go to: http://localhost:7860
+
+Or just refresh the page if already open
+
+
+WHAT YOU SHOULD SEE NOW:
+=======================
+
+✅ Tab 1: Upload images, click "Convert Images"
+✅ Tab 2: Dropdown now shows your 4 processed images!
+  - 20240630-20240644_STANDARDa_T0_20x_PG237.jpg
+  - 20240630-20240644_STANDARDa_T24_20x_PG_EDF.jpg
+  - 20240630-20240644_STANDARDa_T48_20x_PG_EDF.jpg
+  - 20240630-20240644_STANDARDa_T4_20x_PG240.jpg
+
+✅ Tab 3: After segmentation, dropdown will show background-removed PNGs
+
+
+THE FIX IS IN THE CODE - JUST NEED TO RESTART!
