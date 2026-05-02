@@ -7,6 +7,8 @@ Wraps the existing Lignin and Pectin detectors for the web interface.
 import sys
 from pathlib import Path
 from typing import Tuple, Optional, Dict
+from datetime import datetime
+import json
 import cv2
 import numpy as np
 import pandas as pd
@@ -166,12 +168,28 @@ class ChemicalAnalyzer:
         viz_name = f"{base_name}_lignin_detected.jpg"
         viz_path = self.config.results_dir / viz_name
         cv2.imwrite(str(viz_path), viz)
-        
+
+        # Save metrics to JSON for export
+        metrics_path = self.config.results_dir / f"{base_name}_lignin_metrics.json"
+        metrics = {
+            'image_name': base_name,
+            'analysis_type': 'Lignin (PG)',
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'pixels_detected': int(lignin_pixels),
+            'total_pixels': int(total_pixels),
+            'ratio': float(lignin_ratio),
+            'area_microns2': float(area_microns2),
+            'sensitivity': sensitivity
+        }
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+
         return {
             'pixels': int(lignin_pixels),
             'ratio': float(lignin_ratio),
             'area_microns2': float(area_microns2),
-            'viz_path': str(viz_path)
+            'viz_path': str(viz_path),
+            'metrics_path': str(metrics_path)
         }
     
     def _analyze_pectin(self, img: np.ndarray, base_name: str) -> Dict:
@@ -223,12 +241,28 @@ class ChemicalAnalyzer:
         viz_name = f"{base_name}_pectin_detected.jpg"
         viz_path = self.config.results_dir / viz_name
         cv2.imwrite(str(viz_path), viz)
-        
+
+        # Save metrics to JSON for export
+        metrics_path = self.config.results_dir / f"{base_name}_pectin_metrics.json"
+        metrics = {
+            'image_name': base_name,
+            'analysis_type': 'Pectin (RR)',
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'pixels_detected': int(pectin_pixels),
+            'total_pixels': int(total_pixels),
+            'ratio': float(pectin_ratio),
+            'area_microns2': float(area_microns2),
+            'sensitivity': sensitivity
+        }
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+
         return {
             'pixels': int(pectin_pixels),
             'ratio': float(pectin_ratio),
             'area_microns2': float(area_microns2),
-            'viz_path': str(viz_path)
+            'viz_path': str(viz_path),
+            'metrics_path': str(metrics_path)
         }
     
     def _create_results_table(self, results: Dict) -> pd.DataFrame:
