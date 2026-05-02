@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test if all imports work for gradio_app.py"""
+"""Test if all imports work for app.py"""
 
 print("Testing imports...\n")
 

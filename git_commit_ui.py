@@ -19,10 +19,10 @@ print(output)
 # Add files
 print("\nAdding UI files...")
 files = [
-    "gradio_app.py",
+    "app.py",
     "src/gradio_ui/",
     "GRADIO_UI_ARCHITECTURE.md",
-    "GRADIO_IMPLEMENTATION_GUIDE.md", 
+    "GRADIO_IMPLEMENTATION_GUIDE.md",
     "GRADIO_UI_RECOMMENDATIONS.md",
     "GRADIO_UI_SUMMARY.md",
     "requirements_gradio.txt",

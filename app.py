@@ -12,7 +12,7 @@ Features:
 - No coding required!
 
 Usage:
-    python gradio_app.py
+    python app.py
     # Opens web interface at http://localhost:7860
 """
 

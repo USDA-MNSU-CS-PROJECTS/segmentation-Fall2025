@@ -4,7 +4,7 @@
 git checkout -b gradio-ui 2>/dev/null || git checkout gradio-ui
 
 # Stage all UI files
-git add gradio_app.py
+git add app.py
 git add src/gradio_ui/
 git add GRADIO_UI_ARCHITECTURE.md
 git add GRADIO_IMPLEMENTATION_GUIDE.md

@@ -21,7 +21,7 @@ print(f"   Executable: {sys.executable}")
 print("\n2. CURRENT DIRECTORY:")
 cwd = Path.cwd()
 print(f"   {cwd}")
-print(f"   Is repo root: {(cwd / 'gradio_app.py').exists()}")
+print(f"   Is repo root: {(cwd / 'app.py').exists()}")
 
 # 3. Git branch
 print("\n3. GIT BRANCH:")
@@ -104,7 +104,7 @@ for package, description in required.items():
 # 7. Check Gradio UI structure
 print("\n7. GRADIO UI FILES:")
 ui_files = [
-    "gradio_app.py",
+    "app.py",
     "src/gradio_ui/config.py",
     "src/gradio_ui/backend/segmentation.py"
 ]

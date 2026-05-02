@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Debug script to find what's wrong with gradio_app.py"""
+"""Debug script to find what's wrong with app.py"""
 
 print("="*60)
 print("DEBUGGING GRADIO APP STARTUP")
