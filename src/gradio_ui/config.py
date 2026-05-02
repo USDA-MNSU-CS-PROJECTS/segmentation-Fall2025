@@ -32,8 +32,8 @@ class UIConfig:
         
         # Chemical analysis parameters
         self.pixel_to_micron_fallback = 0.9785316641067333
-        self.lignin_sensitivity = 5  # 1-10 scale
-        self.pectin_sensitivity = 5  # 1-10 scale
+        self.lignin_sensitivity = 10  # 1-10 scale (default 10 for better detection)
+        self.pectin_sensitivity = 10  # 1-10 scale (default 10 for better detection)
         
         # Image processing
         self.supported_formats = ['.nd2', '.tiff', '.tif', '.jpg', '.jpeg', '.png']

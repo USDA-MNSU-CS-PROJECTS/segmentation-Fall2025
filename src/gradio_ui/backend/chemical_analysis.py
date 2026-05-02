@@ -7,6 +7,8 @@ Wraps the existing Lignin and Pectin detectors for the web interface.
 import sys
 from pathlib import Path
 from typing import Tuple, Optional, Dict
+from datetime import datetime
+import json
 import cv2
 import numpy as np
 import pandas as pd
@@ -112,22 +114,27 @@ class ChemicalAnalyzer:
         # Convert to HSV
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Define red color range for lignin (PG staining)
+        # Define red/pink color range for lignin (PG staining)
         # Adjusted based on sensitivity setting
         sensitivity = self.config.lignin_sensitivity
 
-        # Red wraps around in HSV (0-10 and 170-180)
+        # Red wraps around in HSV (0-10 and 170-180), but also include pink/magenta (110-140)
         # Made more permissive: lower saturation threshold, wider hue range
-        lower_red1 = np.array([0, 30, 30])  # Lower S and V thresholds
-        upper_red1 = np.array([10 + sensitivity * 2, 255, 255])  # Wider hue range
+        lower_red1 = np.array([0, 20, 20])  # Even lower S and V thresholds
+        upper_red1 = np.array([10 + sensitivity * 3, 255, 255])  # Wider hue range
 
-        lower_red2 = np.array([170 - sensitivity * 2, 30, 30])  # Lower S and V thresholds
+        lower_red2 = np.array([170 - sensitivity * 2, 20, 20])  # Lower S and V thresholds
         upper_red2 = np.array([180, 255, 255])
-        
+
+        # Also check for pink/magenta range (often appears as pink instead of pure red)
+        lower_pink = np.array([110, 20, 20])  # Pink/magenta range
+        upper_pink = np.array([140 + sensitivity, 255, 255])
+
         # Create masks
         mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
         mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-        lignin_mask = cv2.bitwise_or(mask1, mask2)
+        mask_pink = cv2.inRange(hsv, lower_pink, upper_pink)
+        lignin_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask_pink)
         
         # Remove background (white pixels)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -161,12 +168,28 @@ class ChemicalAnalyzer:
         viz_name = f"{base_name}_lignin_detected.jpg"
         viz_path = self.config.results_dir / viz_name
         cv2.imwrite(str(viz_path), viz)
-        
+
+        # Save metrics to JSON for export
+        metrics_path = self.config.results_dir / f"{base_name}_lignin_metrics.json"
+        metrics = {
+            'image_name': base_name,
+            'analysis_type': 'Lignin (PG)',
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'pixels_detected': int(lignin_pixels),
+            'total_pixels': int(total_pixels),
+            'ratio': float(lignin_ratio),
+            'area_microns2': float(area_microns2),
+            'sensitivity': sensitivity
+        }
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+
         return {
             'pixels': int(lignin_pixels),
             'ratio': float(lignin_ratio),
             'area_microns2': float(area_microns2),
-            'viz_path': str(viz_path)
+            'viz_path': str(viz_path),
+            'metrics_path': str(metrics_path)
         }
     
     def _analyze_pectin(self, img: np.ndarray, base_name: str) -> Dict:
@@ -218,12 +241,28 @@ class ChemicalAnalyzer:
         viz_name = f"{base_name}_pectin_detected.jpg"
         viz_path = self.config.results_dir / viz_name
         cv2.imwrite(str(viz_path), viz)
-        
+
+        # Save metrics to JSON for export
+        metrics_path = self.config.results_dir / f"{base_name}_pectin_metrics.json"
+        metrics = {
+            'image_name': base_name,
+            'analysis_type': 'Pectin (RR)',
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'pixels_detected': int(pectin_pixels),
+            'total_pixels': int(total_pixels),
+            'ratio': float(pectin_ratio),
+            'area_microns2': float(area_microns2),
+            'sensitivity': sensitivity
+        }
+        with open(metrics_path, 'w') as f:
+            json.dump(metrics, f, indent=2)
+
         return {
             'pixels': int(pectin_pixels),
             'ratio': float(pectin_ratio),
             'area_microns2': float(area_microns2),
-            'viz_path': str(viz_path)
+            'viz_path': str(viz_path),
+            'metrics_path': str(metrics_path)
         }
     
     def _create_results_table(self, results: Dict) -> pd.DataFrame:
