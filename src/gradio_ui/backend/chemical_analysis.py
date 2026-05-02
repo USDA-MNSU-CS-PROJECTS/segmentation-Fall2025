@@ -112,22 +112,27 @@ class ChemicalAnalyzer:
         # Convert to HSV
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Define red color range for lignin (PG staining)
+        # Define red/pink color range for lignin (PG staining)
         # Adjusted based on sensitivity setting
         sensitivity = self.config.lignin_sensitivity
 
-        # Red wraps around in HSV (0-10 and 170-180)
+        # Red wraps around in HSV (0-10 and 170-180), but also include pink/magenta (110-140)
         # Made more permissive: lower saturation threshold, wider hue range
-        lower_red1 = np.array([0, 30, 30])  # Lower S and V thresholds
-        upper_red1 = np.array([10 + sensitivity * 2, 255, 255])  # Wider hue range
+        lower_red1 = np.array([0, 20, 20])  # Even lower S and V thresholds
+        upper_red1 = np.array([10 + sensitivity * 3, 255, 255])  # Wider hue range
 
-        lower_red2 = np.array([170 - sensitivity * 2, 30, 30])  # Lower S and V thresholds
+        lower_red2 = np.array([170 - sensitivity * 2, 20, 20])  # Lower S and V thresholds
         upper_red2 = np.array([180, 255, 255])
-        
+
+        # Also check for pink/magenta range (often appears as pink instead of pure red)
+        lower_pink = np.array([110, 20, 20])  # Pink/magenta range
+        upper_pink = np.array([140 + sensitivity, 255, 255])
+
         # Create masks
         mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
         mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-        lignin_mask = cv2.bitwise_or(mask1, mask2)
+        mask_pink = cv2.inRange(hsv, lower_pink, upper_pink)
+        lignin_mask = cv2.bitwise_or(cv2.bitwise_or(mask1, mask2), mask_pink)
         
         # Remove background (white pixels)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

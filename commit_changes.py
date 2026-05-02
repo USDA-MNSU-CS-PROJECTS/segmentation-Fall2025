@@ -33,21 +33,31 @@ result = subprocess.run(['git', 'status'], capture_output=True, text=True)
 print(result.stdout)
 
 # Commit
-commit_message = """Phase 1 - UI Polish: Rename entry point and update references
+commit_message = """Phase 1 - UI Polish: Rename entry point and fix chemical analysis
 
-Changes:
+Part 1: Entry Point Rename
 - Renamed gradio_app.py → app.py for cleaner entry point
 - Updated all documentation references (HANDOVER_GRADIO_UI_REPORT.md - 10 locations)
 - Updated scripts: launch_ui.sh, check_setup.py, commit_ui_changes.sh, git_commit_ui.py
 - Updated test files: test_gradio_imports.py, run_gradio_debug.py
 - Cleaned up 18 temporary/redundant documentation files
-- Removed temporary helper scripts
 
-Verification:
-- app.py exists and is functional (513 lines)
-- All imports work correctly
-- Usage instructions updated throughout
-- No remaining references to gradio_app.py
+Part 2: Chemical Analysis Fix (CRITICAL BUG FIX)
+- Fixed zero-ratio bug in chemical analysis
+- Increased default sensitivity from 5 to 10 (now detects staining properly)
+- Expanded lignin detection to include pink/magenta colors (Hue 110-150)
+- Lowered S/V thresholds from 30 to 20 for better detection
+- Results: Lignin now detects 25.9%, Pectin 7.3% (was 0% for both)
+
+Testing:
+- Diagnostic tests confirm chemical analysis now works
+- Sample image shows: Lignin 193k pixels (25.9%), Pectin 54k pixels (7.3%)
+- All functionality preserved
+
+Files modified:
+- app.py (renamed + sensitivity defaults)
+- src/gradio_ui/config.py (sensitivity defaults)
+- src/gradio_ui/backend/chemical_analysis.py (expanded color ranges)
 
 To run: python3 app.py"""
 

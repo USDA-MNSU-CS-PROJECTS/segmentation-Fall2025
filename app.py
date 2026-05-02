@@ -405,19 +405,19 @@ def create_settings_tab():
                 lignin_sensitivity = gr.Slider(
                     minimum=1,
                     maximum=10,
-                    value=5,
+                    value=10,
                     step=1,
                     label="Lignin Detection Sensitivity",
-                    info="1=Very Strict, 10=Very Permissive"
+                    info="1=Very Strict, 10=Very Permissive (Default: 10)"
                 )
 
                 pectin_sensitivity = gr.Slider(
                     minimum=1,
                     maximum=10,
-                    value=5,
+                    value=10,
                     step=1,
                     label="Pectin Detection Sensitivity",
-                    info="1=Very Strict, 10=Very Permissive"
+                    info="1=Very Strict, 10=Very Permissive (Default: 10)"
                 )
 
         # Save settings button
