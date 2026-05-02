@@ -79,14 +79,8 @@ def create_upload_tab():
     """Tab 1: Upload and Process Images"""
     with gr.Tab("📤 Upload & Process"):
         gr.Markdown("""
-        ## Upload Microscopy Images
-        
-        Upload your alfalfa stem cross-section images in any format:
-        - `.nd2` (Nikon microscopy format)
-        - `.tiff` / `.tif` (TIFF images)
-        - `.jpg` / `.jpeg` / `.png` (Standard images)
-        
-        The system will automatically convert them to the required format.
+        ### Upload Images
+        Supported formats: `.nd2`, `.tiff`, `.tif`, `.jpg`, `.jpeg`, `.png`
         """)
         
         with gr.Row():
@@ -132,14 +126,8 @@ def create_segmentation_tab():
     """Tab 2: AI Segmentation"""
     with gr.Tab("🔬 Segmentation"):
         gr.Markdown("""
-        ## AI-Powered Cell Segmentation
-        
-        Run the trained YOLO model to detect and segment cell walls in your images.
-        The model will:
-        - Detect individual cells
-        - Create segmentation masks
-        - Remove background
-        - Generate visualization overlays
+        ### Cell Segmentation
+        Detect and segment cell walls using the trained YOLO model.
         """)
         
         with gr.Row():
@@ -207,13 +195,8 @@ def create_chemical_analysis_tab():
     """Tab 3: Chemical Composition Analysis"""
     with gr.Tab("🧪 Chemical Analysis"):
         gr.Markdown("""
-        ## Lignin & Pectin Detection
-
-        Analyze the chemical composition of segmented cells:
-        - **Lignin Detection**: Identifies red-stained regions (PG staining)
-        - **Pectin Detection**: Identifies burgundy regions (Ruthenium Red staining)
-
-        Results include pixel counts, ratios, and area measurements in microns.
+        ### Lignin & Pectin Detection
+        Analyze chemical composition: Lignin (PG staining) and Pectin (Ruthenium Red).
         """)
 
         with gr.Row():
@@ -280,9 +263,8 @@ def create_results_tab():
     """Tab 4: Results & Export"""
     with gr.Tab("📊 Results & Export"):
         gr.Markdown("""
-        ## View Results and Download Data
-
-        Browse all analysis results and download reports.
+        ### Export Results
+        Download analysis data in CSV, Excel, or ZIP format.
         """)
 
         with gr.Row():
@@ -344,9 +326,8 @@ def create_settings_tab():
     """Tab 5: Settings & Configuration"""
     with gr.Tab("⚙️ Settings"):
         gr.Markdown("""
-        ## Model and Analysis Settings
-
-        Configure the AI model and analysis parameters.
+        ### Configuration
+        Adjust model and analysis parameters.
         """)
 
         with gr.Row():
@@ -454,14 +435,8 @@ def create_app():
 
         # Header
         gr.Markdown("""
-        # 🌱 Alfalfa Cell Segmentation Analysis Platform
-
-        **AI-Powered Microscopy Analysis for Biologists**
-
-        This platform analyzes alfalfa stem cross-sections using deep learning to detect cells
-        and measure chemical composition (lignin and pectin). No coding required!
-
-        ---
+        # 🌱 Alfalfa Cell Segmentation
+        Analyze alfalfa stem cross-sections with AI-powered segmentation and chemical analysis.
         """)
 
         # Create tabs
@@ -485,15 +460,6 @@ def create_app():
             inputs=[],
             outputs=[chem_image_selector]
         )
-
-        # Footer
-        gr.Markdown("""
-        ---
-
-        **Developed for USDA Agricultural Research Service**
-
-        *Questions? Contact your research coordinator or see the documentation.*
-        """)
 
     return app
 
