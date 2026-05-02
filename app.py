@@ -1,23 +1,16 @@
 """
-Alfalfa Cell Segmentation Analysis - Gradio Web Interface
+Alfalfa Cell Segmentation - Gradio Interface
 
-A user-friendly web interface for biologists to analyze alfalfa stem cross-sections
-using AI-powered segmentation and chemical composition analysis.
-
-Features:
-- Upload microscopy images (.nd2, .tiff, .jpg)
-- AI-powered cell segmentation (YOLO)
-- Lignin and Pectin detection
-- Download results and visualizations
-- No coding required!
+Segmentation and chemical analysis interface for alfalfa stem cross-sections.
 
 Usage:
     python app.py
-    # Opens web interface at http://localhost:7860
+    PORT=8000 python app.py  # Custom port
 """
 
 import gradio as gr
 import sys
+import os
 from pathlib import Path
 
 # Add project root to path for imports
@@ -77,16 +70,9 @@ def get_background_removed_images():
 
 def create_upload_tab():
     """Tab 1: Upload and Process Images"""
-    with gr.Tab("📤 Upload & Process"):
+    with gr.Tab("Upload"):
         gr.Markdown("""
-        ## Upload Microscopy Images
-        
-        Upload your alfalfa stem cross-section images in any format:
-        - `.nd2` (Nikon microscopy format)
-        - `.tiff` / `.tif` (TIFF images)
-        - `.jpg` / `.jpeg` / `.png` (Standard images)
-        
-        The system will automatically convert them to the required format.
+        **Supported formats:** `.nd2`, `.tiff`, `.tif`, `.jpg`, `.jpeg`, `.png`
         """)
         
         with gr.Row():
@@ -130,16 +116,9 @@ def create_upload_tab():
 
 def create_segmentation_tab():
     """Tab 2: AI Segmentation"""
-    with gr.Tab("🔬 Segmentation"):
+    with gr.Tab("Segmentation"):
         gr.Markdown("""
-        ## AI-Powered Cell Segmentation
-        
-        Run the trained YOLO model to detect and segment cell walls in your images.
-        The model will:
-        - Detect individual cells
-        - Create segmentation masks
-        - Remove background
-        - Generate visualization overlays
+        **Cell wall detection and segmentation**
         """)
         
         with gr.Row():
@@ -205,15 +184,9 @@ def create_segmentation_tab():
 
 def create_chemical_analysis_tab():
     """Tab 3: Chemical Composition Analysis"""
-    with gr.Tab("🧪 Chemical Analysis"):
+    with gr.Tab("Chemical Analysis"):
         gr.Markdown("""
-        ## Lignin & Pectin Detection
-
-        Analyze the chemical composition of segmented cells:
-        - **Lignin Detection**: Identifies red-stained regions (PG staining)
-        - **Pectin Detection**: Identifies burgundy regions (Ruthenium Red staining)
-
-        Results include pixel counts, ratios, and area measurements in microns.
+        **Lignin and Pectin detection**
         """)
 
         with gr.Row():
@@ -278,17 +251,15 @@ def create_chemical_analysis_tab():
 
 def create_results_tab():
     """Tab 4: Results & Export"""
-    with gr.Tab("📊 Results & Export"):
+    with gr.Tab("Results"):
         gr.Markdown("""
-        ## View Results and Download Data
-
-        Browse all analysis results and download reports.
+        **Export data in CSV, Excel, or ZIP format**
         """)
 
         with gr.Row():
             with gr.Column():
                 # Session results browser
-                gr.Markdown("### Current Session Results")
+                gr.Markdown("**Session Summary**")
                 session_summary = gr.Textbox(
                     label="Session Summary",
                     lines=15,
@@ -342,16 +313,14 @@ def create_results_tab():
 
 def create_settings_tab():
     """Tab 5: Settings & Configuration"""
-    with gr.Tab("⚙️ Settings"):
+    with gr.Tab("Settings"):
         gr.Markdown("""
-        ## Model and Analysis Settings
-
-        Configure the AI model and analysis parameters.
+        **Model and analysis parameters**
         """)
 
         with gr.Row():
             with gr.Column():
-                gr.Markdown("### YOLO Model Settings")
+                gr.Markdown("**YOLO Model**")
 
                 model_path = gr.Textbox(
                     label="Model Path",
@@ -370,7 +339,7 @@ def create_settings_tab():
                 check_model_btn = gr.Button("🔍 Check Model", size="sm")
 
             with gr.Column():
-                gr.Markdown("### Detection Parameters")
+                gr.Markdown("**Detection Parameters**")
 
                 default_conf = gr.Slider(
                     minimum=0.1,
@@ -442,26 +411,32 @@ def create_settings_tab():
 def create_app():
     """Create and configure the Gradio app"""
 
+    # Configure dark theme with green/blue accents
+    theme = gr.themes.Base(
+        primary_hue="green",
+        secondary_hue="blue",
+    ).set(
+        body_background_fill="*neutral_950",
+        body_background_fill_dark="*neutral_950",
+        block_background_fill="*neutral_900",
+        block_background_fill_dark="*neutral_900",
+        input_background_fill="*neutral_800",
+        button_primary_background_fill="*primary_600",
+        button_primary_background_fill_hover="*primary_500",
+    )
+
     with gr.Blocks(
-        title="Alfalfa Cell Segmentation Analysis",
-        theme=gr.themes.Soft(),
+        title="Alfalfa Segmentation",
+        theme=theme,
         css="""
-        .gradio-container {font-family: 'Arial', sans-serif;}
-        h1 {color: #2c5530; text-align: center;}
-        h2 {color: #3d7a3f;}
+        .gradio-container {font-family: system-ui, sans-serif;}
         """
     ) as app:
 
         # Header
         gr.Markdown("""
-        # 🌱 Alfalfa Cell Segmentation Analysis Platform
-
-        **AI-Powered Microscopy Analysis for Biologists**
-
-        This platform analyzes alfalfa stem cross-sections using deep learning to detect cells
-        and measure chemical composition (lignin and pectin). No coding required!
-
-        ---
+        # Alfalfa Cell Segmentation
+        Segmentation and chemical composition analysis.
         """)
 
         # Create tabs
@@ -486,15 +461,6 @@ def create_app():
             outputs=[chem_image_selector]
         )
 
-        # Footer
-        gr.Markdown("""
-        ---
-
-        **Developed for USDA Agricultural Research Service**
-
-        *Questions? Contact your research coordinator or see the documentation.*
-        """)
-
     return app
 
 
@@ -502,11 +468,14 @@ if __name__ == "__main__":
     # Create and launch app
     app = create_app()
 
-    # Launch with sharing enabled for remote access
+    # Get port from environment variable or use default
+    port = int(os.environ.get("PORT", 7860))
+
+    # Launch interface
     app.launch(
-        server_name="0.0.0.0",  # Allow external connections
-        server_port=7860,
-        share=False,  # Set to True to create public Gradio link
+        server_name="0.0.0.0",
+        server_port=port,
+        share=False,
         show_error=True,
         quiet=False
     )
